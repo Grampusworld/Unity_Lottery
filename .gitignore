@@ -11,3 +11,13 @@
 *.sln
 *.slnx
 mono_crash.*
+*.bak
+
+# WorkBuddy assistant data (local only)
+.workbuddy/
+
+# Root-level leftovers that Unity never compiles; real sources live in Assets/Scripts/
+/LotteryGame.cs
+/LotteryTicket.cs
+/ScratchCard.cs
+/Press_Start_2P.zip

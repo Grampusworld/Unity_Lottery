@@ -4,10 +4,18 @@ using UnityEngine;
 // 挂在彩票 Prefab 的根物体上。原有 ScratchCard 不需要修改。
 public class LotteryTicket : MonoBehaviour
 {
+    [SerializeField] private int[] prizes = { 0 };
     [SerializeField] private TextMeshPro prizeText;
     private LotteryGame game;
     private bool revealed;
     public int Prize { get; private set; }
+
+    // 每张票的奖池配在自己的 Prefab 上，等概率抽取；奖池留空时按 0 处理。
+    public int RollPrize()
+    {
+        if (prizes == null || prizes.Length == 0) return 0;
+        return prizes[Random.Range(0, prizes.Length)];
+    }
 
     public void Initialize(LotteryGame owner, int prize)
     {

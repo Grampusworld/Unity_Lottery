@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 847683276831815324}
   - component: {fileID: 916077032286242165}
   m_Layer: 0
-  m_Name: LuckyTicket_Base
+  m_Name: GoldTicket_Base
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -84,7 +84,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 21300000, guid: 6221b1291ade54a8cb7bf462f2d3e3ec, type: 3}
+  m_Sprite: {fileID: 21300000, guid: c4350b2c1b2d9417ba38d0ac2dcd7f38, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -107,7 +107,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3fc153d37ea3448f2bc4e1d35cc44317, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LotteryTicket
-  prizes: 00000000050000000a0000001400000032000000
+  prizes: 64000000c8000000f4010000
   prizeText: {fileID: 7717952783577220988}
 --- !u!1 &549329266618939383
 GameObject:
@@ -215,7 +215,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: $50
+  m_text: $100
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 5e1e301bd4e9442c6a00ca06362a0ce2, type: 2}
   m_sharedMaterial: {fileID: 4333619655188241704, guid: 5e1e301bd4e9442c6a00ca06362a0ce2, type: 2}
@@ -302,7 +302,7 @@ GameObject:
   - component: {fileID: 1879490331055831981}
   - component: {fileID: 644624016334402820}
   m_Layer: 0
-  m_Name: LuckyTicket_Cover
+  m_Name: GoldTicket_Cover
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -372,7 +372,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 2
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 21300000, guid: 59c2775e23b3f4eac90b568cffcfdca1, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 12fbda05dd98046c0a7d0a1c50d839e7, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
