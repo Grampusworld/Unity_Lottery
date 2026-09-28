@@ -11,6 +11,8 @@ GameObject:
   - component: {fileID: 2746045319278336503}
   - component: {fileID: 847683276831815324}
   - component: {fileID: 916077032286242165}
+  - component: {fileID: 496265217109620433}
+  - component: {fileID: 5299516649896128035}
   m_Layer: 0
   m_Name: GoldTicket_Base
   m_TagString: Untagged
@@ -107,8 +109,52 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3fc153d37ea3448f2bc4e1d35cc44317, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LotteryTicket
+  kind: 1
   prizes: 64000000c8000000f4010000
   prizeText: {fileID: 7717952783577220988}
+--- !u!114 &496265217109620433
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 92131731240837190}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 91c6bf39a2ff049cb9ade3a686bce4f4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TicketFlyIn
+  flightTime: 0.52
+  spawnViewportMargin: 0.12
+  arcHeight: 6
+  stretchGain: 0.085
+  maxStretch: 0.15
+  squashRatio: 0.65
+  settleTime: 0.5
+  landingSquash: 0.15
+  bounceHeight: 1.6
+  reducedTimeScale: 0.45
+  jelly: {fileID: 0}
+--- !u!114 &5299516649896128035
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 92131731240837190}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a858bf85520ab4e718c1afe69801d643, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TicketDragger
+  holdTime: 0.22
+  moveTolerance: 0.45
+  followLerp: 26
+  liftScale: 1.06
+  dragSortingBoost: 12
+  returnTime: 0.26
+  inputCamera: {fileID: 0}
+  jelly: {fileID: 0}
 --- !u!1 &549329266618939383
 GameObject:
   m_ObjectHideFlags: 0
@@ -413,3 +459,4 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+  inputEnabled: 1

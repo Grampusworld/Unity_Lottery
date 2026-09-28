@@ -16,6 +16,9 @@ mono_crash.*
 # WorkBuddy assistant data (local only)
 .workbuddy/
 
+# MCP 截图输出目录（脚本验证用的临时图，不在 Assets 下所以 Unity 不会导入）
+/Captures/
+
 # Root-level leftovers that Unity never compiles; real sources live in Assets/Scripts/
 /LotteryGame.cs
 /LotteryTicket.cs

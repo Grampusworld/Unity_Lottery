@@ -13,6 +13,21 @@ public class ScratchCard : MonoBehaviour
     [SerializeField, Min(1)] private int brushRadius = 5;
     [SerializeField, Range(0.1f, 1f)] private float revealThreshold = 0.8f;
     [SerializeField] private UnityEvent onRevealed = new UnityEvent();
+    [Tooltip("关掉后玩家划不动这张涂层（入场动画期间 / 被拿起来拖拽时）。")]
+    [SerializeField] private bool inputEnabled = true;
+
+    // 入场动画与拖拽都靠这个开关硬关输入，而不是靠位置判断：
+    // 关掉的同时清掉 previousPixel，重新打开时不会从上一个残留点连一条线出来。
+    public bool InputEnabled
+    {
+        get => inputEnabled;
+        set
+        {
+            if (inputEnabled == value) return;
+            inputEnabled = value;
+            previousPixel = null;
+        }
+    }
 
     private SpriteRenderer cover;
     private Sprite originalSprite;
@@ -72,7 +87,7 @@ public class ScratchCard : MonoBehaviour
 
     private void Update()
     {
-        if (revealed || runtimeTexture == null || !cover.enabled) return;
+        if (revealed || !inputEnabled || runtimeTexture == null || !cover.enabled) return;
 
         if (!ReadMouse(out Vector2 screenPosition) ||
             !TryGetPixel(screenPosition, out Vector2 currentPixel))

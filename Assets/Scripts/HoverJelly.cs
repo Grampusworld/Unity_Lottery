@@ -19,7 +19,7 @@ using UnityEngine.InputSystem;
 //   overshoot 来自阻尼比 < 1；降级档把阻尼比压到 1.0（无回弹）+ 提高刚度即可。
 //
 // 全程只写 localScale（外加对文本子节点的反向缩放），不改布局属性、不碰点击判定。
-public class HoverJelly : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
+public class HoverJelly : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerDownHandler
 {
     private enum HitSource
     {
@@ -44,13 +44,26 @@ public class HoverJelly : MonoBehaviour, IPointerEnterHandler, IPointerExitHandl
     [Tooltip("对 TMP 文本子节点做反向缩放，让文字始终保持 1.0 采样不被拉伸糊掉。")]
     [SerializeField] private bool counterScaleText = true;
 
-    private const float MaxStep = 1f / 120f;       // 低帧率下的积分步长上限，保证数值稳定
+    [Header("Press Pulse")]
+    [Tooltip("按下时叠一记短促弹出，作为点击反馈。强度是 amplitude 的倍数（1 = 悬停幅度）。")]
+    [SerializeField] private bool pressPulse = true;
+    [SerializeField, Range(0f, 4f)] private float pressPulseStrength = 1.8f;
+    [SerializeField, Range(0.03f, 0.4f)] private float pressPulseDuration = 0.10f;
+
+    private const float MaxStep = 1f / 120f;       // 帧内子步长上限
+    // 子步长还要按刚度收敛：半隐式欧拉要求 ω·h < 2，留 8 倍余量取 0.25。
+    // 不这么做的话，脉冲把 duration 压到 60ms 时 ω≈208，ω·h≈1.75 已在稳定边缘，
+    // 再叠上「脉冲间隔 ≈ 弹簧共振周期」就会把 scale 推到 1e34（实测踩到过）。
+    private const float StabilityRatio = 0.25f;
+    private const float MinScale = 0.5f;           // 弹簧硬限幅：任何情况下都不允许跑飞
+    private const float MaxScale = 1.5f;
     private const float SettleTolerance = 0.02f;   // 收敛判定：相对幅度的 2%，对应 settleTime 的 2% 准则
     private const float MinEpsilon = 0.0001f;
     private const float DisabledFactor = 0.5f; // interactable=false 时幅度减半
     private const float PressedFactor = 0.8f;  // 世界物体被按住时的恒定缩放
     private const float ReducedAmplitudeFactor = 0.5f;
     private const float ReducedSettleTime = 0.05f;  // 临界阻尼下收敛比欠阻尼慢，取值要比目标时长更短
+    private const float PulseHoldRatio = 0.4f;      // 脉冲里「抬起」占的时长比例，剩下的留给回弹
 
     private struct TextCounter
     {
@@ -70,6 +83,10 @@ public class HoverJelly : MonoBehaviour, IPointerEnterHandler, IPointerExitHandl
     private float velocityX, velocityY;
     private bool hovering, pressed;
     private bool settled = true;
+    private float pulseStrength;        // 程序触发的脉冲增益，0 = 无脉冲
+    private float pulseTimer;           // > 0 表示目标仍被抬起
+    private float pulseDurationScale = 1f;
+    private bool pulseEngaged;          // 从 Pulse 到收敛期间，弹簧时长按此比例压缩
     private bool lastInteractable = true;
     private bool reduced;
 
@@ -124,6 +141,20 @@ public class HoverJelly : MonoBehaviour, IPointerEnterHandler, IPointerExitHandl
         settled = false;
     }
 
+    // 程序触发一次弹跳（盘子进机、结算等）。duration 是整个脉冲的总时长；
+    // 传 <= 0 表示用默认 settleTime。高频场景（快放时每 27ms 一个）要把 duration
+    // 压到 60ms 并把 strength 降到 0.6 左右，否则脉冲会互相叠加成持续膨胀。
+    public void Pulse(float strength = 1f, float duration = -1f)
+    {
+        float baseDuration = reduced ? ReducedSettleTime : settleTime;
+        if (duration <= 0f) duration = baseDuration;
+        pulseDurationScale = Mathf.Clamp(duration / Mathf.Max(0.01f, baseDuration), 0.05f, 4f);
+        pulseStrength = Mathf.Max(0f, strength);
+        pulseTimer = duration * PulseHoldRatio;
+        pulseEngaged = true;
+        settled = false;
+    }
+
     public void OnPointerEnter(PointerEventData eventData)
     {
         if (hitSource != HitSource.UIEvent) return;
@@ -134,6 +165,22 @@ public class HoverJelly : MonoBehaviour, IPointerEnterHandler, IPointerExitHandl
     {
         if (hitSource != HitSource.UIEvent) return;
         SetHovering(false);
+    }
+
+    // 按下瞬间叠一记脉冲：对已经 hover 的按钮来说，是在 1.04 之上再弹出到约 1.075，
+    // 松开前就回落。走 Pulse 通道 → 与 hover 取最大增益、互不打断，不会把状态机搞乱。
+    public void OnPointerDown(PointerEventData eventData)
+    {
+        if (hitSource != HitSource.UIEvent) return;
+        if (!pressPulse) return;
+        if (uiButton != null && !uiButton.interactable) return;
+
+        // 降级档下幅度已在 Step 里减半，强度不能再减：strength 一旦小于 hover 的增益 1.0，
+        // 悬停中的按钮按下去就没有任何变化（增益取最大值，脉冲会被 hover 顶掉）。
+        if (reduced)
+            Pulse(pressPulseStrength, ReducedSettleTime);
+        else
+            Pulse(pressPulseStrength, pressPulseDuration);
     }
 
     private void SetHovering(bool value)
@@ -206,12 +253,25 @@ public class HoverJelly : MonoBehaviour, IPointerEnterHandler, IPointerExitHandl
         float amp = amplitude * (reduced ? ReducedAmplitudeFactor : 1f);
         if (!interactable) amp *= DisabledFactor;
 
-        bool engaged = hovering || pressed;
+        float delta = Time.unscaledDeltaTime;
+
+        // 悬停 / 按住 / 脉冲三条来源取最大增益，互不打断：脉冲期间鼠标移入也不会被顶掉。
+        float gain = pressed ? PressedFactor : (hovering ? 1f : 0f);
+        if (pulseTimer > 0f && pulseStrength > gain) gain = pulseStrength;
+
+        // 计时器必须**在增益判定之后**推进：pulseTimer 只占 duration 的 40%（默认 0.10s → 40ms），
+        // 掉帧到 25fps 以下时一帧就跨过整个窗口，先减后判会让脉冲一帧都不生效。
+        if (pulseTimer > 0f)
+        {
+            pulseTimer -= delta;
+            if (pulseTimer < 0f) pulseTimer = 0f;
+        }
+
+        bool engaged = gain > 0f;
         float targetX = 1f;
         float targetY = 1f;
         if (engaged)
         {
-            float gain = pressed ? PressedFactor : 1f;
             targetX = 1f + amp * gain;
             targetY = 1f + amp * gain * (1f - squashRatio);
         }
@@ -219,10 +279,10 @@ public class HoverJelly : MonoBehaviour, IPointerEnterHandler, IPointerExitHandl
         // 2% 收敛准则：ts ≈ 4 / (ζ·ωn)，反解出固有频率。
         float zeta = reduced ? 1f : damping;
         float duration = reduced ? ReducedSettleTime : (engaged ? settleTime : releaseTime);
+        if (pulseEngaged) duration *= pulseDurationScale;
         float omegaX = 4f / Mathf.Max(0.01f, zeta * duration);
         float omegaY = omegaX * verticalLag;
 
-        float delta = Time.unscaledDeltaTime;
         Integrate(ref x, ref velocityX, targetX, omegaX, zeta, delta);
         Integrate(ref y, ref velocityY, targetY, omegaY, zeta, delta);
 
@@ -235,6 +295,9 @@ public class HoverJelly : MonoBehaviour, IPointerEnterHandler, IPointerExitHandl
             y = targetY;
             velocityX = velocityY = 0f;
             settled = true;
+            pulseEngaged = false;
+            pulseStrength = 0f;
+            pulseTimer = 0f;
         }
 
         ApplyScale();
@@ -243,14 +306,27 @@ public class HoverJelly : MonoBehaviour, IPointerEnterHandler, IPointerExitHandl
     private static void Integrate(ref float value, ref float velocity, float target,
         float omega, float zeta, float delta)
     {
-        // 半隐式欧拉 + 定长子步：掉帧时也不会积分爆炸。
+        // 半隐式欧拉 + 子步：步长同时受帧长与刚度约束，掉帧和短脉冲都不会积分爆炸。
+        float maxStep = Mathf.Min(MaxStep, StabilityRatio / Mathf.Max(0.01f, omega));
         while (delta > 0f)
         {
-            float step = Mathf.Min(delta, MaxStep);
+            float step = Mathf.Min(delta, maxStep);
             delta -= step;
             float accel = omega * omega * (target - value) - 2f * zeta * omega * velocity;
             velocity += accel * step;
             value += velocity * step;
+        }
+
+        // 兜底限幅：真出现数值意外时也只表现为封顶的小幅抖动，不会把物体放大成无穷大。
+        if (value > MaxScale)
+        {
+            value = MaxScale;
+            if (velocity > 0f) velocity = 0f;
+        }
+        else if (value < MinScale)
+        {
+            value = MinScale;
+            if (velocity < 0f) velocity = 0f;
         }
     }
 
@@ -272,6 +348,10 @@ public class HoverJelly : MonoBehaviour, IPointerEnterHandler, IPointerExitHandl
     private void ResetToRest()
     {
         hovering = pressed = false;
+        pulseStrength = 0f;
+        pulseTimer = 0f;
+        pulseEngaged = false;
+        pulseDurationScale = 1f;
         x = y = 1f;
         velocityX = velocityY = 0f;
         settled = true;
