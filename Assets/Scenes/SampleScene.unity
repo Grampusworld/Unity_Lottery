@@ -935,6 +935,7 @@ GameObject:
   - component: {fileID: 200911301}
   - component: {fileID: 200911303}
   - component: {fileID: 200911300}
+  - component: {fileID: 200911304}
   m_Layer: 0
   m_Name: ScratcherSpeedButton
   m_TagString: Untagged
@@ -959,8 +960,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 295, y: -720}
-  m_SizeDelta: {x: 590, y: 120}
+  m_AnchoredPosition: {x: 295, y: -714}
+  m_SizeDelta: {x: 590, y: 108}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &200911300
 MonoBehaviour:
@@ -1081,6 +1082,21 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+--- !u!114 &200911304
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 200911298}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
+  m_EffectColor: {r: 0.27450982, g: 0.39215687, b: 0.5686275, a: 1}
+  m_EffectDistance: {x: 3, y: -3}
+  m_UseGraphicAlpha: 1
 --- !u!1 &209671265
 GameObject:
   m_ObjectHideFlags: 0
@@ -1684,6 +1700,7 @@ GameObject:
   - component: {fileID: 331510133}
   - component: {fileID: 331510135}
   - component: {fileID: 331510132}
+  - component: {fileID: 331510136}
   m_Layer: 0
   m_Name: ScratcherUnlockButton
   m_TagString: Untagged
@@ -1708,8 +1725,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 295, y: -590}
-  m_SizeDelta: {x: 590, y: 120}
+  m_AnchoredPosition: {x: 295, y: -584}
+  m_SizeDelta: {x: 590, y: 108}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &331510132
 MonoBehaviour:
@@ -1830,6 +1847,21 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+--- !u!114 &331510136
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 331510130}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
+  m_EffectColor: {r: 0.27450982, g: 0.39215687, b: 0.5686275, a: 1}
+  m_EffectDistance: {x: 3, y: -3}
+  m_UseGraphicAlpha: 1
 --- !u!1 &375424336
 GameObject:
   m_ObjectHideFlags: 0
@@ -2403,6 +2435,7 @@ GameObject:
   - component: {fileID: 518941557}
   - component: {fileID: 518941559}
   - component: {fileID: 518941556}
+  - component: {fileID: 518941560}
   m_Layer: 0
   m_Name: ScratcherCapacityButton
   m_TagString: Untagged
@@ -2427,8 +2460,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 295, y: -850}
-  m_SizeDelta: {x: 590, y: 120}
+  m_AnchoredPosition: {x: 295, y: -844}
+  m_SizeDelta: {x: 590, y: 108}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &518941556
 MonoBehaviour:
@@ -2549,6 +2582,21 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+--- !u!114 &518941560
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 518941554}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
+  m_EffectColor: {r: 0.27450982, g: 0.39215687, b: 0.5686275, a: 1}
+  m_EffectDistance: {x: 3, y: -3}
+  m_UseGraphicAlpha: 1
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0
@@ -4019,6 +4067,7 @@ GameObject:
   - component: {fileID: 771845495}
   - component: {fileID: 771845497}
   - component: {fileID: 771845498}
+  - component: {fileID: 771845499}
   m_Layer: 0
   m_Name: WasherUnlockButton
   m_TagString: Untagged
@@ -4043,8 +4092,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 295, y: -200}
-  m_SizeDelta: {x: 590, y: 120}
+  m_AnchoredPosition: {x: 295, y: -194}
+  m_SizeDelta: {x: 590, y: 108}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &771845495
 MonoBehaviour:
@@ -4165,6 +4214,21 @@ MonoBehaviour:
   pressPulse: 1
   pressPulseStrength: 1.8
   pressPulseDuration: 0.1
+--- !u!114 &771845499
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 771845493}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
+  m_EffectColor: {r: 0.27450982, g: 0.39215687, b: 0.5686275, a: 1}
+  m_EffectDistance: {x: 3, y: -3}
+  m_UseGraphicAlpha: 1
 --- !u!1 &809485269
 GameObject:
   m_ObjectHideFlags: 0
@@ -4741,6 +4805,7 @@ GameObject:
   - component: {fileID: 911598839}
   - component: {fileID: 911598842}
   - component: {fileID: 911598843}
+  - component: {fileID: 911598844}
   m_Layer: 5
   m_Name: LuckyTicketButton
   m_TagString: Untagged
@@ -4909,6 +4974,21 @@ MonoBehaviour:
   iconRowY: 43
   sideMargin: 6
   layoutActive: 1
+--- !u!114 &911598844
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 911598837}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
+  m_EffectColor: {r: 0.27450982, g: 0.39215687, b: 0.5686275, a: 1}
+  m_EffectDistance: {x: 3, y: -3}
+  m_UseGraphicAlpha: 1
 --- !u!1 &920607863
 GameObject:
   m_ObjectHideFlags: 0
@@ -4922,6 +5002,7 @@ GameObject:
   - component: {fileID: 920607865}
   - component: {fileID: 920607867}
   - component: {fileID: 920607868}
+  - component: {fileID: 920607869}
   m_Layer: 0
   m_Name: PurpleSpongeButton
   m_TagString: Untagged
@@ -4946,8 +5027,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 295, y: -70}
-  m_SizeDelta: {x: 590, y: 120}
+  m_AnchoredPosition: {x: 295, y: -64}
+  m_SizeDelta: {x: 590, y: 108}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &920607865
 MonoBehaviour:
@@ -5068,6 +5149,21 @@ MonoBehaviour:
   pressPulse: 1
   pressPulseStrength: 1.8
   pressPulseDuration: 0.1
+--- !u!114 &920607869
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 920607863}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
+  m_EffectColor: {r: 0.27450982, g: 0.39215687, b: 0.5686275, a: 1}
+  m_EffectDistance: {x: 3, y: -3}
+  m_UseGraphicAlpha: 1
 --- !u!1 &935628209
 GameObject:
   m_ObjectHideFlags: 0
@@ -7653,6 +7749,7 @@ GameObject:
   - component: {fileID: 1461900866}
   - component: {fileID: 1461900868}
   - component: {fileID: 1461900869}
+  - component: {fileID: 1461900870}
   m_Layer: 0
   m_Name: CapacityUpgradeButton
   m_TagString: Untagged
@@ -7677,8 +7774,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 295, y: -460}
-  m_SizeDelta: {x: 590, y: 120}
+  m_AnchoredPosition: {x: 295, y: -454}
+  m_SizeDelta: {x: 590, y: 108}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1461900866
 MonoBehaviour:
@@ -7799,6 +7896,21 @@ MonoBehaviour:
   pressPulse: 1
   pressPulseStrength: 1.8
   pressPulseDuration: 0.1
+--- !u!114 &1461900870
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1461900864}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
+  m_EffectColor: {r: 0.27450982, g: 0.39215687, b: 0.5686275, a: 1}
+  m_EffectDistance: {x: 3, y: -3}
+  m_UseGraphicAlpha: 1
 --- !u!1 &1465793858
 GameObject:
   m_ObjectHideFlags: 0
@@ -8121,8 +8233,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 174, y: -83}
-  m_SizeDelta: {x: 338.4554, y: 92.4919}
+  m_AnchoredPosition: {x: 25, y: -83}
+  m_SizeDelta: {x: 600, y: 92.49}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &1571143684
 MonoBehaviour:
@@ -8144,7 +8256,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: MONEY $0
+  m_text: MONEY  $0
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 5e1e301bd4e9442c6a00ca06362a0ce2, type: 2}
   m_sharedMaterial: {fileID: 4333619655188241704, guid: 5e1e301bd4e9442c6a00ca06362a0ce2, type: 2}
@@ -8178,7 +8290,7 @@ MonoBehaviour:
   m_fontSizeMin: 18
   m_fontSizeMax: 72
   m_fontStyle: 0
-  m_HorizontalAlignment: 1
+  m_HorizontalAlignment: 2
   m_VerticalAlignment: 4096
   m_textAlignment: 65535
   m_characterSpacing: 0
@@ -8188,7 +8300,7 @@ MonoBehaviour:
   m_lineSpacingMax: 0
   m_paragraphSpacing: 0
   m_charWidthMaxAdj: 0
-  m_TextWrappingMode: 1
+  m_TextWrappingMode: 0
   m_wordWrappingRatios: 0.4
   m_overflowMode: 0
   m_linkedTextComponent: {fileID: 0}
@@ -8647,6 +8759,7 @@ GameObject:
   - component: {fileID: 1672695679}
   - component: {fileID: 1672695681}
   - component: {fileID: 1672695682}
+  - component: {fileID: 1672695683}
   m_Layer: 0
   m_Name: SpeedUpgradeButton
   m_TagString: Untagged
@@ -8671,8 +8784,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 295, y: -330}
-  m_SizeDelta: {x: 590, y: 120}
+  m_AnchoredPosition: {x: 295, y: -324}
+  m_SizeDelta: {x: 590, y: 108}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1672695679
 MonoBehaviour:
@@ -8793,6 +8906,21 @@ MonoBehaviour:
   pressPulse: 1
   pressPulseStrength: 1.8
   pressPulseDuration: 0.1
+--- !u!114 &1672695683
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1672695677}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
+  m_EffectColor: {r: 0.27450982, g: 0.39215687, b: 0.5686275, a: 1}
+  m_EffectDistance: {x: 3, y: -3}
+  m_UseGraphicAlpha: 1
 --- !u!1 &1728540367
 GameObject:
   m_ObjectHideFlags: 0
@@ -9037,6 +9165,7 @@ GameObject:
   - component: {fileID: 1764032598}
   - component: {fileID: 1764032599}
   - component: {fileID: 1764032600}
+  - component: {fileID: 1764032601}
   m_Layer: 5
   m_Name: GoldTicketButton
   m_TagString: Untagged
@@ -9064,7 +9193,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 295, y: -335}
+  m_AnchoredPosition: {x: 295, y: -337}
   m_SizeDelta: {x: 550, y: 210}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1764032596
@@ -9205,6 +9334,21 @@ MonoBehaviour:
   iconRowY: 43
   sideMargin: 6
   layoutActive: 1
+--- !u!114 &1764032601
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1764032594}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
+  m_EffectColor: {r: 0.27450982, g: 0.39215687, b: 0.5686275, a: 1}
+  m_EffectDistance: {x: 3, y: -3}
+  m_UseGraphicAlpha: 1
 --- !u!1 &1801399497
 GameObject:
   m_ObjectHideFlags: 0
@@ -10218,6 +10362,7 @@ GameObject:
   - component: {fileID: 2100306016}
   - component: {fileID: 2100306020}
   - component: {fileID: 2100306021}
+  - component: {fileID: 2100306022}
   m_Layer: 5
   m_Name: NovaTicketButton
   m_TagString: Untagged
@@ -10339,7 +10484,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 295, y: -565}
+  m_AnchoredPosition: {x: 295, y: -569}
   m_SizeDelta: {x: 550, y: 210}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2100306020
@@ -10386,6 +10531,21 @@ MonoBehaviour:
   iconRowY: 43
   sideMargin: 6
   layoutActive: 1
+--- !u!114 &2100306022
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100306015}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
+  m_EffectColor: {r: 0.27450982, g: 0.39215687, b: 0.5686275, a: 1}
+  m_EffectDistance: {x: 3, y: -3}
+  m_UseGraphicAlpha: 1
 --- !u!1 &2124029992
 GameObject:
   m_ObjectHideFlags: 0
