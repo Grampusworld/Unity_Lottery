@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -41,6 +42,9 @@ public class LotteryGame : MonoBehaviour
 
     [Header("Shop")]
     [SerializeField] private TMP_Text balanceText;
+    [Tooltip("金币不足时抖动的组件。留空会自动到 balanceText 所在的物体上找。")]
+    [SerializeField] private MoneyShake moneyShake;
+    private CoinGainFeedback coinFeedback;
     [SerializeField] private GameObject ticketsPanel;
     [SerializeField] private GameObject gadgetsPanel;
     [SerializeField] private Button ticketsTabButton;
@@ -74,6 +78,10 @@ public class LotteryGame : MonoBehaviour
     public DirtyPlate CurrentPlate => currentPlate;
     public AutoScratcher Scratcher => scratcher;
     public bool ScratcherUnlocked => scratcherUnlocked;
+
+    // 花了钱但钱不够。只在真正买不起的时候抛 —— 「已经买过 / 没解锁 / 等级满了」
+    // 这些原因在各自的入口就 return 了，压根走不到 Spend()，所以不会误报。
+    public event System.Action InsufficientFunds;
     // 机器等级：速度与容量各 5 级、合计 0~10，分三档对应三段素材（0 = Retro CRT 最低）。
     private int ScratcherTier
     {
@@ -97,13 +105,23 @@ public class LotteryGame : MonoBehaviour
     private void Start()
     {
         LoadState();
+        coinFeedback = GetComponent<CoinGainFeedback>();
+        if (coinFeedback != null) coinFeedback.Initialize(balanceText, balance);
         if (sponge != null) sponge.Initialize(this, purpleUnlocked);
         RefreshWasher();
         RefreshScratcher();
         // 读档时洗盘机已经在跑：直接摆好机内盘子开始洗，不重播解锁入场。
         if (washerUnlocked && washer != null) washer.BeginFromSave();
         if (debugPanel != null) debugPanel.SetActive(false);
+        // 不用去场景里连线：MoneyShake 就挂在余额文本上，和 balanceText 是同一个物体。
+        if (moneyShake == null && balanceText != null) moneyShake = balanceText.GetComponent<MoneyShake>();
+        if (moneyShake != null) InsufficientFunds += moneyShake.Play;
         ShowTickets();
+    }
+
+    private void OnDestroy()
+    {
+        if (moneyShake != null) InsufficientFunds -= moneyShake.Play;
     }
 
     private void Update()
@@ -153,7 +171,7 @@ public class LotteryGame : MonoBehaviour
     {
         if (ticket == null || ticket.Settled) return;
         ticket.MarkSettled();
-        PayTicket(ticket.Kind, ticket.Prize);
+        PayTicket(ticket.Kind, ticket.Prize, ticket.transform);
         // 桌子上的那张仍然交给 RemoveTicket 收尾：它要等 2 秒淡出，
         // 而且 currentTicket 必须留到那时才清空，否则玩家在这 2 秒里再买一张会被它抢先置空。
         if (ticket == currentTicket) StartCoroutine(RemoveTicket(ticket));
@@ -177,17 +195,19 @@ public class LotteryGame : MonoBehaviour
     // 自动刮彩票机的结算入口：票已经被机器吞走，这里只发钱与计数。
     public void AwardMachineTicket(int kind, int prize)
     {
-        PayTicket(kind, prize);
+        PayTicket(kind, prize, scratcher != null ? scratcher.transform : null);
         RefreshUI();
     }
 
-    private void PayTicket(int kind, int prize)
+    private void PayTicket(int kind, int prize, Transform source)
     {
         int index = Mathf.Clamp(kind, 0, scratched.Length - 1);
+        int oldBalance = balance;
         balance += prize;
         int count = ++scratched[index];
         for (int stage = 0; stage < Milestones.Length; stage++)
             if (count == Milestones[stage]) balance += MilestoneBonuses[index, stage];
+        if (coinFeedback != null) coinFeedback.ShowGain(balance - oldBalance, source);
         Commit();
     }
 
@@ -204,13 +224,32 @@ public class LotteryGame : MonoBehaviour
         if (currentPlate != null || platePrefab == null || plateSpawnPoint == null) return;
         currentPlate = Instantiate(platePrefab, plateSpawnPoint.position, plateSpawnPoint.rotation);
         currentPlate.Initialize(this);
+        ConfigurePlateLanding(currentPlate);
         RefreshUI();
+    }
+
+    // 盘子落在桌面哪个位置是随机的，这里有唯一一处「哪些东西不能压」的定义。
+    // 两台机器**永远**算禁区：未解锁时它们看不见，但解锁后就在那儿，
+    // 不能等那时候才发现盘子已经压在机器身上了。
+    // 彩票只在出票那一刻桌上有票时才排除 —— 桌上空着的时候整个桌面都能用。
+    private void ConfigurePlateLanding(DirtyPlate plate)
+    {
+        if (plate == null) return;
+        PlateFlyIn flyIn = plate.GetComponent<PlateFlyIn>();
+        if (flyIn == null) return;
+        flyIn.SetObstacles(new[]
+        {
+            washer != null ? washer.transform : null,
+            scratcher != null ? scratcher.transform : null,
+            currentTicket != null ? currentTicket.transform : null
+        });
     }
 
     public void CompletePlate(DirtyPlate plate)
     {
         if (plate == null || plate != currentPlate) return;
         balance += 1;
+        if (coinFeedback != null) coinFeedback.ShowGain(1, plate.transform);
         Commit();
         StartCoroutine(RemovePlate(plate));
     }
@@ -259,6 +298,7 @@ public class LotteryGame : MonoBehaviour
     {
         if (!washerUnlocked || count <= 0) return;
         balance += count;
+        if (coinFeedback != null && washer != null) coinFeedback.ShowGain(count, washer.transform);
         Commit();
     }
     private void RefreshWasher()
@@ -311,39 +351,50 @@ public class LotteryGame : MonoBehaviour
 
     private void RefreshUI()
     {
-        if (balanceText != null) balanceText.text = "MONEY  $" + balance;
+        if (coinFeedback != null) coinFeedback.SyncBalance(balance);
+        else if (balanceText != null) balanceText.text = "MONEY  $" + balance;
         SetLabel(luckyTicketButton, TicketLabel("LUCKY", 0, 10, true));
         SetLabel(goldTicketButton, TicketLabel("GOLD", 1, 50, goldUnlocked));
         SetLabel(novaTicketButton, TicketLabel("NOVA", 2, 50, novaUnlocked));
         SetTicketDetail(luckyTicketButton, TicketDetail(0, true));
         SetTicketDetail(goldTicketButton, TicketDetail(1, goldUnlocked));
         SetTicketDetail(novaTicketButton, TicketDetail(2, novaUnlocked));
-        if (luckyTicketButton != null) luckyTicketButton.interactable = currentTicket == null && balance >= 10;
-        if (goldTicketButton != null) goldTicketButton.interactable = currentTicket == null && balance >= (goldUnlocked ? 50 : 100);
-        if (novaTicketButton != null) novaTicketButton.interactable = currentTicket == null && balance >= (novaUnlocked ? 50 : 1000);
+        SetButtonState(luckyTicketButton, BuyableState(currentTicket == null && balance >= 10));
+        SetButtonState(goldTicketButton, BuyableState(currentTicket == null && balance >= (goldUnlocked ? 50 : 100)));
+        SetButtonState(novaTicketButton, BuyableState(currentTicket == null && balance >= (novaUnlocked ? 50 : 1000)));
         SetProgress(luckyProgressFill, 0);
         SetProgress(goldProgressFill, 1);
         SetProgress(novaProgressFill, 2);
         SetLabel(plateButton, currentPlate == null ? "ONE MORE PLATE  +$1" : "CLEAN THE PLATE FIRST");
-        if (plateButton != null) plateButton.interactable = currentPlate == null;
+        SetButtonState(plateButton, BuyableState(currentPlate == null));
         SetLabel(purpleSpongeButton, purpleUnlocked ? "PURPLE SPONGE EQUIPPED\n2x BRUSH RADIUS" : "PURPLE SPONGE  $30\n2x BRUSH RADIUS");
-        if (purpleSpongeButton != null) purpleSpongeButton.interactable = !purpleUnlocked && balance >= 30;
+        SetButtonState(purpleSpongeButton, purpleUnlocked
+            ? ButtonState.Completed
+            : BuyableState(balance >= 30));
         SetLabel(washerUnlockButton, washerUnlocked ? "WASHER RUNNING\nAUTO +$" + (5 + capacityLevel * 5) + " / " + (10 - speedLevel) + "s" : "UNLOCK WASHER  $200\nAUTO +$5 / 10s");
-        if (washerUnlockButton != null) washerUnlockButton.interactable = !washerUnlocked && balance >= 200;
-        // 每行都是两行文案，格式统一成「现值 / 等级 / 价格」——按钮只有 120px 高，三行会挤。
-        SetLabel(speedUpgradeButton, "WASHER SPEED\n" + (10 - speedLevel) + "s  LV " + speedLevel + "/5  +$1");
-        SetLabel(capacityUpgradeButton, "WASHER CAPACITY\nMAX " + (5 + capacityLevel * 5) + "  LV " + capacityLevel + "/5  +$1");
-        if (speedUpgradeButton != null) speedUpgradeButton.interactable = washerUnlocked && speedLevel < 5 && balance >= 1;
-        if (capacityUpgradeButton != null) capacityUpgradeButton.interactable = washerUnlocked && capacityLevel < 5 && balance >= 1;
+        SetButtonState(washerUnlockButton, washerUnlocked
+            ? ButtonState.Completed
+            : BuyableState(balance >= 200));
+        // 每行都是两行文案，格式统一成「现值 / 等级 / 价格」——按钮只有 108px 高，三行会挤。
+        // 满级那一行不再挂价格：金色状态牌底下写着 "+$1" 等于说"还能再买一次"。
+        SetLabel(speedUpgradeButton, "WASHER SPEED\n" + (10 - speedLevel) + "s  LV " + speedLevel + "/5" + UpgradePrice(speedLevel, 5));
+        SetLabel(capacityUpgradeButton, "WASHER CAPACITY\nMAX " + (5 + capacityLevel * 5) + "  LV " + capacityLevel + "/5" + UpgradePrice(capacityLevel, 5));
+        SetButtonState(speedUpgradeButton, UpgradeState(washerUnlocked, speedLevel, 5));
+        SetButtonState(capacityUpgradeButton, UpgradeState(washerUnlocked, capacityLevel, 5));
 
         SetLabel(scratcherUnlockButton, scratcherUnlocked
             ? "SCRATCHER  LV " + (ScratcherTier + 1) + "/3\n" + ScratcherTierName + "  " + ScratcherSeconds + "s  X" + ScratcherCapacitySlots
             : "UNLOCK SCRATCHER  $" + ScratcherUnlockCost + "\nAUTO-SCRATCH TICKETS");
-        if (scratcherUnlockButton != null) scratcherUnlockButton.interactable = !scratcherUnlocked && balance >= ScratcherUnlockCost;
-        SetLabel(scratcherSpeedButton, "SCRATCHER SPEED\n" + ScratcherSeconds + "s  LV " + scratcherSpeedLevel + "/5  +$1");
-        SetLabel(scratcherCapacityButton, "SCRATCHER CAPACITY\nMAX " + ScratcherCapacitySlots + "  LV " + scratcherCapacityLevel + "/5  +$1");
-        if (scratcherSpeedButton != null) scratcherSpeedButton.interactable = scratcherUnlocked && scratcherSpeedLevel < ScratcherMaxLevel && balance >= 1;
-        if (scratcherCapacityButton != null) scratcherCapacityButton.interactable = scratcherUnlocked && scratcherCapacityLevel < ScratcherMaxLevel && balance >= 1;
+        // 解锁后这一行没有任何可点的东西（BuyScratcher 第一句就 return），
+        // 所以它不是"暂时用不了"，而是**已完成的终态**：走金色状态牌、摘掉果冻，
+        // 别让它继续以"能点"的样子骗玩家去点。
+        SetButtonState(scratcherUnlockButton, scratcherUnlocked
+            ? ButtonState.Completed
+            : BuyableState(balance >= ScratcherUnlockCost));
+        SetLabel(scratcherSpeedButton, "SCRATCHER SPEED\n" + ScratcherSeconds + "s  LV " + scratcherSpeedLevel + "/5" + UpgradePrice(scratcherSpeedLevel, ScratcherMaxLevel));
+        SetLabel(scratcherCapacityButton, "SCRATCHER CAPACITY\nMAX " + ScratcherCapacitySlots + "  LV " + scratcherCapacityLevel + "/5" + UpgradePrice(scratcherCapacityLevel, ScratcherMaxLevel));
+        SetButtonState(scratcherSpeedButton, UpgradeState(scratcherUnlocked, scratcherSpeedLevel, ScratcherMaxLevel));
+        SetButtonState(scratcherCapacityButton, UpgradeState(scratcherUnlocked, scratcherCapacityLevel, ScratcherMaxLevel));
         SetTabColor(ticketsTabButton, showingTickets);
         SetTabColor(gadgetsTabButton, !showingTickets);
     }
@@ -394,9 +445,128 @@ public class LotteryGame : MonoBehaviour
         Image image = button.GetComponent<Image>();
         if (image != null) image.color = selected ? new Color32(49, 111, 133, 255) : new Color32(36, 48, 67, 255);
     }
+
+    // 商店按钮的三档视觉。**恒可点**，不再用 interactable=false 拦点击 ——
+    // 那样玩家点下去什么反馈都没有，而「金币不足」恰恰是必须给反馈的情况。
+    //
+    //   Available   —— 白染色（现在买得起）
+    //   Unavailable —— 灰染色（未解锁 / 买不起）
+    //   Completed   —— 金底金边 + 关果冻 + 免悬停按下高亮（已拥有 / 已满级，不会再有下一次）
+    //
+    // Unavailable 沿用 Selectable 自己的颜色通道：把 normalColor 换成 disabledColor。
+    // 按钮恒为可用态 → 状态机取的是 normalColor，于是底图变成和原来禁用态**逐像素一致**的灰
+    // （同一个 ColorBlock.disabledColor，同一套 sRGB/线性换算，不用手算 alpha 混合）。
+    // 悬停/按下仍然会亮起来 —— 它确实是可以点的，只是点了会抖钱。
+    //
+    // Completed 走不了这条路：ColorBlock 的染色是**乘性**的，底色 RGB(28,44,69) 乘任何 0~1
+    // 的 tint 只会更暗，永远乘不出金色。所以金色只能直接写在 targetGraphic.color 上，
+    // 同时把 ColorBlock 四态一起压成白色 —— 否则悬停(0.96)/按下(0.78) 仍会让金底明暗跳变，
+    // 玩家会以为这块牌子还能点。
+    private enum ButtonState
+    {
+        Available,
+        Unavailable,
+        Completed
+    }
+
+    private static readonly Color CompletedFill = new Color32(74, 58, 26, 255);
+    private static readonly Color CompletedBorder = new Color32(198, 158, 64, 255);
+
+    // 按钮的**初始**样式，第一次被 SetButtonState 碰到之前抓一次。
+    // 金色是唯一会覆盖 Image.color / Outline.effectColor / ColorBlock 四态的状态，
+    // 退出它（Debug 重置进度）时必须还原，不能靠猜原值。
+    private struct ButtonStyle
+    {
+        public Color fill;
+        public Color border;
+        public ColorBlock colors;
+    }
+
+    private readonly Dictionary<Button, ButtonStyle> buttonStyles = new Dictionary<Button, ButtonStyle>();
+    private readonly Dictionary<Button, ButtonState> buttonStates = new Dictionary<Button, ButtonState>();
+
+    private void SetButtonState(Button button, ButtonState state)
+    {
+        if (button == null) return;
+
+        ButtonStyle style;
+        if (!buttonStyles.TryGetValue(button, out style))
+        {
+            Image sourceImage = button.GetComponent<Image>();
+            Outline sourceOutline = button.GetComponent<Outline>();
+            style = new ButtonStyle();
+            style.fill = sourceImage != null ? sourceImage.color : Color.white;
+            style.border = sourceOutline != null ? sourceOutline.effectColor : CompletedBorder;
+            style.colors = button.colors;
+            buttonStyles.Add(button, style);
+        }
+
+        // 同状态重复写会让 Selectable 每帧重跑一次 tint（把图形标脏），先短路。
+        ButtonState previous;
+        if (buttonStates.TryGetValue(button, out previous) && previous == state) return;
+        buttonStates[button] = state;
+
+        button.interactable = true;
+
+        ColorBlock colors = style.colors;
+        if (state == ButtonState.Completed)
+        {
+            colors.normalColor = Color.white;
+            colors.highlightedColor = Color.white;
+            colors.pressedColor = Color.white;
+            colors.selectedColor = Color.white;
+        }
+        else
+        {
+            colors.normalColor = state == ButtonState.Available ? Color.white : colors.disabledColor;
+        }
+        button.colors = colors;
+
+        Image image = button.GetComponent<Image>();
+        if (image != null)
+            image.color = state == ButtonState.Completed ? CompletedFill : style.fill;
+
+        Outline outline = button.GetComponent<Outline>();
+        if (outline != null)
+            outline.effectColor = state == ButtonState.Completed ? CompletedBorder : style.border;
+
+        // 满级按钮不该再有果冻：组件一关，OnDisable 就会把 scale 复位（含文本的反向缩放），
+        // 顺带把指针事件也停掉 —— IPointer*Handler 只在 enabled 时才收事件。
+        HoverJelly jelly = button.GetComponent<HoverJelly>();
+        if (jelly != null)
+        {
+            bool wanted = state != ButtonState.Completed;
+            if (jelly.enabled != wanted) jelly.enabled = wanted;
+        }
+    }
+
+    // 两态按钮（票 / 盘子）：只有「现在能不能买」，没有"已拥有"的终态。
+    private static ButtonState BuyableState(bool buyable)
+    {
+        return buyable ? ButtonState.Available : ButtonState.Unavailable;
+    }
+
+    // 升级行三态：满级 → 金色状态牌；未解锁 / 买不起 → 灰；否则白。
+    private ButtonState UpgradeState(bool unlocked, int level, int maxLevel)
+    {
+        if (unlocked && level >= maxLevel) return ButtonState.Completed;
+        return unlocked && balance >= 1 ? ButtonState.Available : ButtonState.Unavailable;
+    }
+
+    // 满级行不再挂价格：金色状态牌上写着 "+$1"，等于告诉玩家还能再买一次。
+    private static string UpgradePrice(int level, int maxLevel)
+    {
+        return level >= maxLevel ? "" : "  +$1";
+    }
     private bool Spend(int amount)
     {
-        if (balance < amount) return false;
+        if (balance < amount)
+        {
+            // 唯一的「买不起」出口。所有购买入口的最后一道判断都是它，
+            // 所以金币不足的反馈接在这里就一处覆盖全场。
+            if (InsufficientFunds != null) InsufficientFunds();
+            return false;
+        }
         balance -= amount;
         return true;
     }
@@ -478,6 +648,7 @@ public class LotteryGame : MonoBehaviour
         currentTicket = null;
         currentPlate = null;
         LoadState();
+        if (coinFeedback != null) coinFeedback.Initialize(balanceText, balance);
         if (sponge != null) sponge.SetAdvanced(false);
         RefreshWasher();
         RefreshScratcher();

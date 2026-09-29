@@ -101,6 +101,23 @@ public class AutoScratcher : MonoBehaviour
     public string TierName =>
         (tiers != null && tierIndex >= 0 && tierIndex < tiers.Length) ? tiers[tierIndex].displayName : "";
 
+    // 正在播入场下落（还没落地）。计数牌要在这段时间藏起来：锚点跟着 transform 走，
+    // 而 transform 还在半空，字会从屏幕上方一路飘下来。
+    public bool Entering => entryTimer >= 0f;
+
+    // 机身**可见内容**的底边中点（世界坐标），用来把计数牌摆到机器下方。
+    // 不能直接用 transform.position：三张素材的 pivot 现在恰好都落在内容底边上，
+    // 但那是装配时实测出来的巧合，不是这个类对外承诺的接口。
+    public Vector3 ContentBottomWorld
+    {
+        get
+        {
+            if (body == null || body.sprite == null) return transform.position;
+            ContentRectWorld(out Vector3 center, out Vector2 size);
+            return new Vector3(center.x, center.y - size.y * 0.5f, transform.position.z);
+        }
+    }
+
     private void Awake()
     {
         body = GetComponent<SpriteRenderer>();
@@ -127,7 +144,14 @@ public class AutoScratcher : MonoBehaviour
 
         if (!active)
         {
-            if (entryTimer >= 0f) entryTimer = -1f;
+            // 入场下落被中途取消时（Debug 重置进度正好落在 0.55s 的窗口里就会），
+            // 光清计时器会把机身**永久留在半空**：下一次解锁时 PlayEntry 拿"当前位置"当停机位，
+            // 机器就停在天上了。所以取消入场必须同时把机身放回停机位。
+            if (entryTimer >= 0f)
+            {
+                entryTimer = -1f;
+                transform.position = entryTo;
+            }
             ClearAll(true);
             if (ring != null) ring.Hide(true);
             if (effect != null) effect.SetRunning(false);

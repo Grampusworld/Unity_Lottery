@@ -297,6 +297,7 @@ GameObject:
   m_Component:
   - component: {fileID: 40362034}
   - component: {fileID: 40362033}
+  - component: {fileID: 40362035}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -341,6 +342,7 @@ MonoBehaviour:
   scratcherSpeedButton: {fileID: 200911303}
   scratcherCapacityButton: {fileID: 518941559}
   balanceText: {fileID: 1571143684}
+  moneyShake: {fileID: 1571143686}
   ticketsPanel: {fileID: 452654685}
   gadgetsPanel: {fileID: 740306221}
   ticketsTabButton: {fileID: 998295342}
@@ -361,6 +363,27 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &40362035
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 40362032}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c334ada75768c476cba0effc72460edc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CoinGainFeedback
+  coinFrames:
+  - {fileID: -616119216932696447, guid: ce09ea24c1d414eaba6f4d424db18377, type: 3}
+  - {fileID: 8058487312623985474, guid: ce09ea24c1d414eaba6f4d424db18377, type: 3}
+  - {fileID: 3473316487388923254, guid: ce09ea24c1d414eaba6f4d424db18377, type: 3}
+  flightDuration: 0.45
+  holdDuration: 0.1
+  fadeDuration: 0.15
+  countDuration: 1.1
+  spinDegreesPerSecond: 540
 --- !u!1 &81699408
 GameObject:
   m_ObjectHideFlags: 0
@@ -551,7 +574,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.10980392, g: 0.17254902, b: 0.27058825, a: 1}
+  m_Color: {r: 0.14117648, g: 0.1882353, b: 0.2627451, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -1047,7 +1070,7 @@ MonoBehaviour:
     m_SelectOnRight: {fileID: 0}
   m_Transition: 1
   m_Colors:
-    m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
+    m_NormalColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
     m_PressedColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
     m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
@@ -1109,6 +1132,7 @@ GameObject:
   - component: {fileID: 209671268}
   - component: {fileID: 209671267}
   - component: {fileID: 209671266}
+  - component: {fileID: 209671270}
   m_Layer: 0
   m_Name: Auto Lottery Machine
   m_TagString: Untagged
@@ -1256,13 +1280,33 @@ Transform:
   m_GameObject: {fileID: 209671265}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 42, y: -30, z: 0}
+  m_LocalPosition: {x: 53.1, y: -36.5, z: 0}
   m_LocalScale: {x: 38, y: 38, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1433652126}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &209671270
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 209671265}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 392434c3a77a5444ba6822d3951dcff0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ScratcherCountLabel
+  scratcher: {fileID: 209671266}
+  labelRect: {fileID: 1094621750}
+  labelCanvas: {fileID: 817509432}
+  labelText: {fileID: 1094621748}
+  worldCamera: {fileID: 519420031}
+  belowOffset: 2.2
+  normalColor: {r: 0.9647059, g: 0.92156863, b: 0.8039216, a: 1}
+  fullColor: {r: 0.7764706, g: 0.61960787, b: 0.2509804, a: 1}
 --- !u!1 &235285733
 GameObject:
   m_ObjectHideFlags: 0
@@ -1320,7 +1364,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: LuckyTicket
+  m_text: NEW LUCKY  $10
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 5e1e301bd4e9442c6a00ca06362a0ce2, type: 2}
   m_sharedMaterial: {fileID: 4333619655188241704, guid: 5e1e301bd4e9442c6a00ca06362a0ce2, type: 2}
@@ -1646,7 +1690,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.5}
   m_AnchorMax: {x: 0, y: 0.5}
-  m_AnchoredPosition: {x: 136.995, y: 43}
+  m_AnchoredPosition: {x: 100.994995, y: 43}
   m_SizeDelta: {x: 48, y: 30}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &291152104
@@ -1812,7 +1856,7 @@ MonoBehaviour:
     m_SelectOnRight: {fileID: 0}
   m_Transition: 1
   m_Colors:
-    m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
+    m_NormalColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
     m_PressedColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
     m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
@@ -2547,7 +2591,7 @@ MonoBehaviour:
     m_SelectOnRight: {fileID: 0}
   m_Transition: 1
   m_Colors:
-    m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
+    m_NormalColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
     m_PressedColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
     m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
@@ -2791,7 +2835,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: ONE MORE PLATE
+  m_text: ONE MORE PLATE  +$1
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 5e1e301bd4e9442c6a00ca06362a0ce2, type: 2}
   m_sharedMaterial: {fileID: 4333619655188241704, guid: 5e1e301bd4e9442c6a00ca06362a0ce2, type: 2}
@@ -2905,7 +2949,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.5}
   m_AnchorMax: {x: 0, y: 0.5}
-  m_AnchoredPosition: {x: 76.994995, y: 43}
+  m_AnchoredPosition: {x: 64.994995, y: 43}
   m_SizeDelta: {x: 48, y: 30}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &568117113
@@ -2980,6 +3024,13 @@ MonoBehaviour:
   yellowSprite: {fileID: -1046322013988812845, guid: 030bf61ed20cc44758fbf3c6d7e862cf, type: 3}
   purpleSprite: {fileID: 6553659898321724092, guid: 000b0251cb4fd41a18e8389b1db1ae58, type: 3}
   inputCamera: {fileID: 519420031}
+  tableSurface: {fileID: 1588743650}
+  tabletopPixels:
+    serializedVersion: 2
+    x: 58
+    y: 128
+    width: 99
+    height: 57
   yellowBrushRadius: 4
 --- !u!212 &607013237
 SpriteRenderer:
@@ -3050,7 +3101,7 @@ Transform:
   m_GameObject: {fileID: 607013235}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 49, y: -34, z: 0}
+  m_LocalPosition: {x: 36, y: -32.4, z: 0}
   m_LocalScale: {x: 18, y: 18, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -3265,7 +3316,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.5}
   m_AnchorMax: {x: 0, y: 0.5}
-  m_AnchoredPosition: {x: 76.994995, y: 43}
+  m_AnchoredPosition: {x: 52.994995, y: 43}
   m_SizeDelta: {x: 48, y: 30}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &668228174
@@ -4154,7 +4205,7 @@ MonoBehaviour:
     m_SelectOnRight: {fileID: 0}
   m_Transition: 1
   m_Colors:
-    m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
+    m_NormalColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
     m_PressedColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
     m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
@@ -4358,6 +4409,7 @@ RectTransform:
   m_Children:
   - {fileID: 1011964692}
   - {fileID: 699489173}
+  - {fileID: 1094621750}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -4435,7 +4487,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 
+  m_text: SCRATCHED 1/10   BONUS $50
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 5e1e301bd4e9442c6a00ca06362a0ce2, type: 2}
   m_sharedMaterial: {fileID: 4333619655188241704, guid: 5e1e301bd4e9442c6a00ca06362a0ce2, type: 2}
@@ -4444,7 +4496,7 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
+    rgba: 4283216874
   m_fontColor: {r: 0.91764706, g: 0.7019608, b: 0.29803923, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
@@ -4574,7 +4626,7 @@ MonoBehaviour:
       m_Calls: []
   m_text: 'SCRATCHER SPEED
 
-    3s  LV 5/5  +$1'
+    8s  LV 0/5  +$1'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 5e1e301bd4e9442c6a00ca06362a0ce2, type: 2}
   m_sharedMaterial: {fileID: 4333619655188241704, guid: 5e1e301bd4e9442c6a00ca06362a0ce2, type: 2}
@@ -5380,7 +5432,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 
+  m_text: THEN $50 / TICKET
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 5e1e301bd4e9442c6a00ca06362a0ce2, type: 2}
   m_sharedMaterial: {fileID: 4333619655188241704, guid: 5e1e301bd4e9442c6a00ca06362a0ce2, type: 2}
@@ -5389,7 +5441,7 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
+    rgba: 4283216874
   m_fontColor: {r: 0.91764706, g: 0.7019608, b: 0.29803923, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
@@ -5519,7 +5571,7 @@ MonoBehaviour:
       m_Calls: []
   m_text: 'WASHER SPEED
 
-    10s  LV 5/5  +$1'
+    10s  LV 0/5  +$1'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 5e1e301bd4e9442c6a00ca06362a0ce2, type: 2}
   m_sharedMaterial: {fileID: 4333619655188241704, guid: 5e1e301bd4e9442c6a00ca06362a0ce2, type: 2}
@@ -6213,6 +6265,143 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1049327441}
   m_CullTransparentMesh: 1
+--- !u!1 &1094621747
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1094621750}
+  - component: {fileID: 1094621749}
+  - component: {fileID: 1094621748}
+  m_Layer: 0
+  m_Name: ScratcherCountText
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1094621748
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1094621747}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 0
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_text: 0/1
+  m_isRightToLeft: 0
+  m_fontAsset: {fileID: 11400000, guid: 5e1e301bd4e9442c6a00ca06362a0ce2, type: 2}
+  m_sharedMaterial: {fileID: 4333619655188241704, guid: 5e1e301bd4e9442c6a00ca06362a0ce2, type: 2}
+  m_fontSharedMaterials: []
+  m_fontMaterial: {fileID: 0}
+  m_fontMaterials: []
+  m_fontColor32:
+    serializedVersion: 2
+    rgba: 4291685366
+  m_fontColor: {r: 0.9647059, g: 0.92156863, b: 0.8039216, a: 1}
+  m_enableVertexGradient: 0
+  m_colorMode: 3
+  m_fontColorGradient:
+    topLeft: {r: 1, g: 1, b: 1, a: 1}
+    topRight: {r: 1, g: 1, b: 1, a: 1}
+    bottomLeft: {r: 1, g: 1, b: 1, a: 1}
+    bottomRight: {r: 1, g: 1, b: 1, a: 1}
+  m_fontColorGradientPreset: {fileID: 0}
+  m_spriteAsset: {fileID: 0}
+  m_tintAllSprites: 0
+  m_StyleSheet: {fileID: 0}
+  m_TextStyleHashCode: -1183493901
+  m_overrideHtmlColors: 0
+  m_faceColor:
+    serializedVersion: 2
+    rgba: 4294967295
+  m_fontSize: 24
+  m_fontSizeBase: 24
+  m_fontWeight: 400
+  m_enableAutoSizing: 0
+  m_fontSizeMin: 18
+  m_fontSizeMax: 72
+  m_fontStyle: 0
+  m_HorizontalAlignment: 2
+  m_VerticalAlignment: 512
+  m_textAlignment: 65535
+  m_characterSpacing: 0
+  m_characterHorizontalScale: 1
+  m_wordSpacing: 0
+  m_lineSpacing: 0
+  m_lineSpacingMax: 0
+  m_paragraphSpacing: 0
+  m_charWidthMaxAdj: 0
+  m_TextWrappingMode: 0
+  m_wordWrappingRatios: 0.4
+  m_overflowMode: 0
+  m_linkedTextComponent: {fileID: 0}
+  parentLinkedComponent: {fileID: 0}
+  m_enableKerning: 0
+  m_ActiveFontFeatures: 6e72656b
+  m_enableExtraPadding: 0
+  checkPaddingRequired: 0
+  m_isRichText: 1
+  m_EmojiFallbackSupport: 1
+  m_parseCtrlCharacters: 1
+  m_isOrthographic: 1
+  m_isCullingEnabled: 0
+  m_horizontalMapping: 0
+  m_verticalMapping: 0
+  m_uvLineOffset: 0
+  m_geometrySortingOrder: 0
+  m_IsTextObjectScaleStatic: 0
+  m_VertexBufferAutoSizeReduction: 0
+  m_useMaxVisibleDescender: 1
+  m_pageToDisplay: 1
+  m_margin: {x: 0, y: 0, z: 0, w: 0}
+  m_isUsingLegacyAnimationComponent: 0
+  m_isVolumetricText: 0
+  m_hasFontAssetChanged: 0
+  m_baseMaterial: {fileID: 0}
+  m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!222 &1094621749
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1094621747}
+  m_CullTransparentMesh: 1
+--- !u!224 &1094621750
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1094621747}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 817509433}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 600.4303, y: -571.1732}
+  m_SizeDelta: {x: 240, y: 48}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1127298986
 GameObject:
   m_ObjectHideFlags: 0
@@ -6429,7 +6618,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: NovaTicketButton
+  m_text: UNLOCK NOVA  $1000
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 5e1e301bd4e9442c6a00ca06362a0ce2, type: 2}
   m_sharedMaterial: {fileID: 4333619655188241704, guid: 5e1e301bd4e9442c6a00ca06362a0ce2, type: 2}
@@ -6864,7 +7053,7 @@ MonoBehaviour:
       m_Calls: []
   m_text: 'SCRATCHER CAPACITY
 
-    MAX 6  LV 5/5  +$1'
+    MAX 1  LV 0/5  +$1'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 5e1e301bd4e9442c6a00ca06362a0ce2, type: 2}
   m_sharedMaterial: {fileID: 4333619655188241704, guid: 5e1e301bd4e9442c6a00ca06362a0ce2, type: 2}
@@ -7340,7 +7529,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 'PURPLE SPONGE EQUIPPED
+  m_text: 'PURPLE SPONGE  $30
 
     2x BRUSH RADIUS'
   m_isRightToLeft: 0
@@ -7836,7 +8025,7 @@ MonoBehaviour:
     m_SelectOnRight: {fileID: 0}
   m_Transition: 1
   m_Colors:
-    m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
+    m_NormalColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
     m_PressedColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
     m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
@@ -7968,7 +8157,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: GoldTicketButton
+  m_text: UNLOCK GOLD  $100
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 5e1e301bd4e9442c6a00ca06362a0ce2, type: 2}
   m_sharedMaterial: {fileID: 4333619655188241704, guid: 5e1e301bd4e9442c6a00ca06362a0ce2, type: 2}
@@ -8210,6 +8399,7 @@ GameObject:
   - component: {fileID: 1571143683}
   - component: {fileID: 1571143685}
   - component: {fileID: 1571143684}
+  - component: {fileID: 1571143686}
   m_Layer: 5
   m_Name: MoneyText
   m_TagString: Untagged
@@ -8256,7 +8446,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: MONEY  $0
+  m_text: MONEY  $51
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 5e1e301bd4e9442c6a00ca06362a0ce2, type: 2}
   m_sharedMaterial: {fileID: 4333619655188241704, guid: 5e1e301bd4e9442c6a00ca06362a0ce2, type: 2}
@@ -8336,6 +8526,24 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1571143682}
   m_CullTransparentMesh: 1
+--- !u!114 &1571143686
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1571143682}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b9b34af675a57407d9484362bbf0d5d4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MoneyShake
+  duration: 0.35
+  shiftTexels: 4
+  growthStep: 8
+  shakeColor: {r: 1, g: 0, b: 0, a: 1}
+  maxStack: 2
+  reducedAmplitudeScale: 0.5
 --- !u!1 &1588743649
 GameObject:
   m_ObjectHideFlags: 0
@@ -8846,7 +9054,7 @@ MonoBehaviour:
     m_SelectOnRight: {fileID: 0}
   m_Transition: 1
   m_Colors:
-    m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
+    m_NormalColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
     m_PressedColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
     m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
@@ -9255,7 +9463,7 @@ MonoBehaviour:
     m_SelectOnRight: {fileID: 0}
   m_Transition: 1
   m_Colors:
-    m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
+    m_NormalColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
     m_PressedColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
     m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
@@ -9702,9 +9910,9 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 'WASHER RUNNING
+  m_text: 'UNLOCK WASHER  $200
 
-    AUTO +$30 / 5s'
+    AUTO +$5 / 10s'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 5e1e301bd4e9442c6a00ca06362a0ce2, type: 2}
   m_sharedMaterial: {fileID: 4333619655188241704, guid: 5e1e301bd4e9442c6a00ca06362a0ce2, type: 2}
@@ -9980,7 +10188,7 @@ MonoBehaviour:
       m_Calls: []
   m_text: 'WASHER CAPACITY
 
-    MAX 30  LV 5/5  +$1'
+    MAX 5  LV 0/5  +$1'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 5e1e301bd4e9442c6a00ca06362a0ce2, type: 2}
   m_sharedMaterial: {fileID: 4333619655188241704, guid: 5e1e301bd4e9442c6a00ca06362a0ce2, type: 2}
@@ -10230,7 +10438,7 @@ RectTransform:
   m_Father: {fileID: 501452397}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 1}
+  m_AnchorMax: {x: 0.1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0.5}
@@ -10391,7 +10599,7 @@ MonoBehaviour:
     m_SelectOnRight: {fileID: 0}
   m_Transition: 1
   m_Colors:
-    m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
+    m_NormalColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
     m_PressedColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
     m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
@@ -10868,7 +11076,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 
+  m_text: THEN $50 / TICKET
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 5e1e301bd4e9442c6a00ca06362a0ce2, type: 2}
   m_sharedMaterial: {fileID: 4333619655188241704, guid: 5e1e301bd4e9442c6a00ca06362a0ce2, type: 2}
@@ -10877,7 +11085,7 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
+    rgba: 4283216874
   m_fontColor: {r: 0.91764706, g: 0.7019608, b: 0.29803923, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
