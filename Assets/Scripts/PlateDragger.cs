@@ -47,7 +47,12 @@ public class PlateDragger : MonoBehaviour
     private float holdTimer;
     private bool holding;
     private bool grabbed;
-    private int bodyOrder;
+
+    // 拖拽时要把**整组**渲染层一起抬。只抬根是不够的：污渍是子物体
+    // （Dirt - separate layer，order 3），根一抬到 14，不透明的盘子就把它整个盖住 ——
+    // 症状是「拖起来污渍消失、松手又出现」。票没这个毛病，因为 TicketDragger 抬的是成组的。
+    private Renderer[] sortingRenderers;
+    private int[] sortingOrders;
 
     private void Awake()
     {
@@ -56,7 +61,27 @@ public class PlateDragger : MonoBehaviour
         flyIn = GetComponent<PlateFlyIn>();
         baseScale = transform.localScale;
         if (inputCamera == null) inputCamera = Camera.main;
-        if (body != null) bodyOrder = body.sortingOrder;
+        CacheSortingOrders();
+    }
+
+    // 记下根 + 全部子渲染器的原始层数，之后靠同一个偏移整体平移，相对层次不变。
+    private void CacheSortingOrders()
+    {
+        sortingRenderers = GetComponentsInChildren<Renderer>(true);
+        sortingOrders = new int[sortingRenderers.Length];
+        for (int i = 0; i < sortingRenderers.Length; i++)
+            sortingOrders[i] = sortingRenderers[i] != null ? sortingRenderers[i].sortingOrder : 0;
+    }
+
+    private void ApplySortingBoost(bool boosted)
+    {
+        if (sortingRenderers == null) return;
+        int delta = boosted ? dragSortingBoost : 0;
+        for (int i = 0; i < sortingRenderers.Length; i++)
+        {
+            if (sortingRenderers[i] == null) continue;
+            sortingRenderers[i].sortingOrder = sortingOrders[i] + delta;
+        }
     }
 
     // 由 LotteryGame 在 Instantiate 之后调用。桌面参数从场景里的海绵实例取
@@ -126,7 +151,7 @@ public class PlateDragger : MonoBehaviour
         // 顺序要紧：先挂起果冻**再**写 scale（jelly.enabled=false 会同步触发
         // OnDisable → ResetToRest 写一次复位，写在抬起之后会把 1.06 抹掉）。
         if (jelly != null) jelly.enabled = false;
-        if (body != null) body.sortingOrder = bodyOrder + dragSortingBoost;
+        ApplySortingBoost(true);
         // ClampDrag 的入参是 transform.position，偏移也必须按 pivot 记（机器踩过的坑）。
         grabOffset = transform.position - world;
         transform.localScale = new Vector3(baseScale.x * liftScale, baseScale.y * liftScale, baseScale.z);
@@ -142,7 +167,7 @@ public class PlateDragger : MonoBehaviour
     private void Drop()
     {
         grabbed = false;
-        if (body != null) body.sortingOrder = bodyOrder;
+        ApplySortingBoost(false);
         // 落定前再夹一次：抬起放大多出来的 6% 也要算进桌面与碰撞余量。
         transform.position = ClampDrag(transform.position);
         transform.localScale = baseScale;
@@ -213,7 +238,7 @@ public class PlateDragger : MonoBehaviour
     private void OnDisable()
     {
         holding = grabbed = false;
-        if (body != null) body.sortingOrder = bodyOrder;
+        ApplySortingBoost(false);
         transform.localScale = baseScale;
     }
 }

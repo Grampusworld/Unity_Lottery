@@ -19,11 +19,19 @@ public static class WasherSetup
     private const string RingPath = "Assets/Materials/Automatic Dish Washer/WasherProgressRing.png";
     private const string MachinePath = "Assets/Materials/Automatic Dish Washer/Automatic Dish Washer - Machine.png";
 
-    private const float WasherScale = 24f;      // 原 20，适当放大给盘子腾空间（再大会顶到屏幕右边界）
+    // 26 = 场景的实际值（20 → 24 → 26，26 是「再大会顶到屏幕右边界」前最后一档）。
+    // 曾经写 24 而场景是 26：菜单一跑就把机身缩回去，环/槽位/水流/碰撞会连带全错 —— 菜单必须与场景一致才能保持幂等。
+    private const float WasherScale = 26f;
     private const int RingTextureSize = 128;
     private const float RingOuter = 62f;
     private const float RingInner = 54f;        // 8px 环带：12px 太厚，会糊住机身控制面板
-    private const float RingSizeRatio = 1.45f;  // 环直径 = 洗盘机高度 × 该系数（刚好包住机身，不重叠）
+    // 进度环：直径 = 洗盘机可见宽（29.64）× 0.36 ≈ 10.67 世界单位，环底边离机身内容顶边 1.0。
+    // 两台机器共用这一套参数（都归 WasherProgressRing 算）。用**宽度**而不是高度：
+    // 两台机器高度接近，按高度算两个环几乎一样大（8.24 vs 7.11），按宽度算才拉得开（10.67 vs 6.02）。
+    // 旧值 1.45 是「直径 = 身高 × 1.45」（包住机身），那个环比机身还大一圈。
+    private const float RingSizeRatio = 0.36f;
+    private const float RingBottomGap = 1f;
+    private const int RingFillSteps = 0;        // 0 = 不量化（逐帧连续填）
 
     // 玻璃窗：机身 sprite 局部 x 12..101 / y 28..61，即 90×34 texel，中心只偏半个 texel。
     private const int WindowWidthTexels = 90;
@@ -72,10 +80,10 @@ public static class WasherSetup
         // 4) 盘子入场组件
         WasherPlateFeeder feeder = AttachFeeder(washer, washerRenderer, jelly, plateSprite);
 
-        // 5) 圆环进度（洗盘机的同级物体，避免被 scale=24 和果冻缩放影响）
+        // 5) 圆环进度（洗盘机的同级物体，避免被 scale=26 和果冻缩放影响）
         WasherProgressRing ring = BuildRing(washer, washerRenderer);
 
-        // 6) 水流特效（反过来必须是**子物体**：继承 scale=24 才能和机身共用像素格）
+        // 6) 水流特效（反过来必须是**子物体**：继承 scale=26 才能和机身共用像素格）
         WasherWaterEffect water = BuildWater(washer, washerRenderer);
 
         // 7) 回填洗盘机的引用
@@ -295,7 +303,6 @@ public static class WasherSetup
     private static WasherProgressRing BuildRing(GameObject washer, SpriteRenderer washerRenderer)
     {
         Sprite ringSprite = BuildRingSprite();
-        Vector3 center = washerRenderer.bounds.center;
 
         GameObject ringRoot = GameObject.Find("WasherProgressRing");
         if (ringRoot == null)
@@ -304,12 +311,7 @@ public static class WasherSetup
             Undo.RegisterCreatedObjectUndo(ringRoot, "WasherProgressRing");
         }
         Undo.RecordObject(ringRoot.transform, "Ring transform");
-        ringRoot.transform.SetPositionAndRotation(new Vector3(center.x, center.y, washer.transform.position.z),
-            Quaternion.identity);
-
-        float ringWorldSize = washerRenderer.bounds.size.y * RingSizeRatio;
-        float canvasScale = ringWorldSize / RingTextureSize;
-        ringRoot.transform.localScale = new Vector3(canvasScale, canvasScale, 1f);
+        ringRoot.transform.rotation = Quaternion.identity;
 
         Canvas canvas = ringRoot.GetComponent<Canvas>();
         if (canvas == null) canvas = Undo.AddComponent<Canvas>(ringRoot);
@@ -359,12 +361,32 @@ public static class WasherSetup
         var so = new SerializedObject(ring);
         so.FindProperty("ringImage").objectReferenceValue = image;
         so.FindProperty("canvasGroup").objectReferenceValue = group;
+        // 位置/尺寸参数与运行时是同一套字段：不回写就会留着场景里的旧值（旧环是「身高 × 1.45」，
+        // 而且尺寸只在场景里手写过一次 —— 机身从 24 长到 26 之后它就没再跟着变过）。
+        so.FindProperty("fillSteps").intValue = RingFillSteps;
+        so.FindProperty("sizeRatio").floatValue = RingSizeRatio;
+        so.FindProperty("bottomGap").floatValue = RingBottomGap;
         so.ApplyModifiedPropertiesWithoutUndo();
         EditorUtility.SetDirty(ring);
+
+        // 位置与尺寸交给环自己算 —— 编辑器里看到的就是运行时算出来的同一个位置。
+        PlaceRing(ring, washerRenderer);
         return ring;
     }
 
-    // 水流特效：挂在洗盘机**下面**（子物体），才能继承 scale=24 与机身共用像素格。
+    // 洗盘机的可见内容包围盒（世界空间）：它只有一个 sprite 且不透明区贴着子矩形边缘，
+    // 所以 sprite.bounds（乘静止缩放）就是可见范围。用 sprite.bounds 而不是 renderer.bounds ——
+    // 后者在 renderer 被禁用（未解锁）时不可靠。
+    private static void PlaceRing(WasherProgressRing ring, SpriteRenderer machineRenderer)
+    {
+        Vector3 scale = machineRenderer.transform.lossyScale;
+        Vector3 size = Vector3.Scale(machineRenderer.sprite.bounds.size, scale);
+        Vector3 center = machineRenderer.transform.position
+            + Vector3.Scale(machineRenderer.sprite.bounds.center, scale);
+        ring.SetMachineAnchor(machineRenderer, center, new Vector2(Mathf.Abs(size.x), Mathf.Abs(size.y)));
+    }
+
+    // 水流特效：挂在洗盘机**下面**（子物体），才能继承 scale=26 与机身共用像素格。
     //
     // 场景里只落一个空的 WasherWater 物体（SpriteRenderer + WasherWaterEffect），
     // 贴图与气泡都在运行时生成：气泡是组件的内部细节，不是场景数据，

@@ -122,7 +122,6 @@ public class MachineDrag : MonoBehaviour
         if (dragging)
         {
             transform.position = ClampDrag(world + grabOffset);
-            FollowInternals();
             if (inertia != null) inertia.TrackDrag();
             return;
         }
@@ -156,7 +155,6 @@ public class MachineDrag : MonoBehaviour
         }
         if (inertia != null) inertia.Stop();
         transform.position = designPosition;
-        FollowInternals();
     }
 
     private void EndDrag()
@@ -173,14 +171,6 @@ public class MachineDrag : MonoBehaviour
         Vector3 settled = DragBodyRegistry.Resolve(this, transform.position, transform.position);
         if (settled == transform.position) return;
         transform.position = settled;
-        FollowInternals();
-    }
-
-    // 机身在动 → 机内所有「按 transform.position 现算」的东西都得重排。
-    private void FollowInternals()
-    {
-        if (scratcher != null) scratcher.FollowMachine();
-        if (washer != null) washer.FollowMachine();
     }
 
     // 刷新「可见内容包围盒」并同步到碰撞表。刮票机的 footprint 随等级变，

@@ -27,16 +27,14 @@ public class AutomaticDishWasher : MonoBehaviour
 
     [SerializeField] private Sprite displaySprite;
     [SerializeField] private WasherPlateFeeder feeder;
+    [Tooltip("进度环。尺寸与位置都归它自己算（环在机器**正上方**，直径 = 可见内容宽 × sizeRatio）。")]
     [SerializeField] private WasherProgressRing ring;
-    [Tooltip("进度环的根物体。与洗盘机**同级**（不是子物体），位置里没有任何脚本在改它 ——" +
-             "拖动时必须自己跟。留空会自动取 ring 所在的物体。")]
-    [SerializeField] private Transform ringRoot;
     [SerializeField] private WasherWaterEffect water;
 
     private SpriteRenderer display;
     private LotteryGame game;
-    private Vector3 ringOffset;
-    private Vector3 ringAnchor;
+    private Vector3 baseLossyScale = Vector3.one;
+    private Vector3 lastLayoutPosition;
     private float elapsed;
     private float secondsPerCycle = 10f;
     private int platesPerCycle = 5;
@@ -48,34 +46,34 @@ public class AutomaticDishWasher : MonoBehaviour
         display = GetComponent<SpriteRenderer>();
         display.sprite = displaySprite;
         display.enabled = false;
+        // 静止尺寸只取一次：Configure 会在升级、读档、Debug 重置时随时被调，
+        // 那时机身可能正被悬停果冻放大（最多 9%），现读 lossyScale 会把环永久性放大。
+        baseLossyScale = transform.lossyScale;
+        lastLayoutPosition = transform.position;
         SetWater(false);
-        if (ringRoot == null && ring != null) ringRoot = ring.transform;
-        CaptureRingOffset();
+        UpdateRingAnchor();
     }
 
-    // 进度环与机身是**同级**物体（做子物体会被机身 26 倍缩放带跑、还会被果冻抖），
-    // 编辑器里手摆出来的那个位置差就是它的挂载偏移。记下来，机身之后动到哪儿它跟到哪儿。
-    private void CaptureRingOffset()
+    // 机身只在**真的动了**的时候才重排机内盘子。拖动 / 惯性滑行 / 入场三条路径都会经过这里 ——
+    // 以前靠 MachineDrag 显式调 FollowMachine()，而它在滑行分支直接 return，
+    // 「甩一把洗盘机，机内那叠盘子留在原地」就是这么来的。
+    private void LateUpdate()
     {
-        if (ringRoot == null) return;
-        ringOffset = ringRoot.position - transform.position;
-        ringAnchor = transform.position;
-    }
-
-    // 机身位置被拖动/滑行改动时每帧调用。机内盘子与进度环都是绝对坐标，不重排就留在原地。
-    public void FollowMachine()
-    {
+        Vector3 now = transform.position;
+        if (now == lastLayoutPosition) return;
+        lastLayoutPosition = now;
         if (feeder != null) feeder.RefreshSlotPositions();
-        SyncRing();
     }
 
-    // 只在机身真的动了才写 —— 每帧无条件写 transform 会把 Canvas 标脏。
-    private void SyncRing()
+    // 把「机身可见内容包围盒」推给进度环。洗盘机只有一个 sprite、不透明区贴着子矩形边缘，
+    // 所以 sprite.bounds（乘静止缩放）就是可见内容。位置与尺寸由环自己算：
+    // 直径 = 可见宽 × sizeRatio，环心 = 内容顶边 + 间隙 + 半径。
+    private void UpdateRingAnchor()
     {
-        if (ringRoot == null) return;
-        if (transform.position == ringAnchor) return;
-        ringAnchor = transform.position;
-        ringRoot.position = transform.position + ringOffset;
+        if (ring == null || display == null || display.sprite == null) return;
+        Vector3 size = Vector3.Scale(display.sprite.bounds.size, baseLossyScale);
+        Vector3 center = transform.position + Vector3.Scale(display.sprite.bounds.center, baseLossyScale);
+        ring.SetMachineAnchor(display, center, new Vector2(Mathf.Abs(size.x), Mathf.Abs(size.y)));
     }
 
     // 只更新参数与显示：不播动画，也不打断正在跑的周期（速度升级时不能重置进度）。
@@ -88,6 +86,7 @@ public class AutomaticDishWasher : MonoBehaviour
         if (display == null) display = GetComponent<SpriteRenderer>();
         display.sprite = displaySprite;
         display.enabled = active;
+        UpdateRingAnchor();
         if (active) return;
 
         state = State.Locked;
@@ -121,7 +120,14 @@ public class AutomaticDishWasher : MonoBehaviour
         state = State.Feeding;
         elapsed = 0f;
         SetWater(false);
-        if (ring != null) ring.Hide();
+        // 收钱那一刻直接归零、不淡出：满圈 = 这一轮完成、空 = 新一轮，本身就够直白；
+        // 再叠一层「满圈淡出 0.1s」只会被看成掉帧。装盘的 0.8s 里环保持不可见，
+        // 开始洗时再从 0 平滑填（fillSteps <= 1 时是逐帧连续，没有 1/24 的台阶）。
+        if (ring != null)
+        {
+            ring.Hide(true);
+            ring.SetProgress(0f);
+        }
         if (feeder == null)
         {
             StartWashing();
@@ -156,7 +162,6 @@ public class AutomaticDishWasher : MonoBehaviour
 
     private void Update()
     {
-        SyncRing();
         if (!unlocked || game == null || state != State.Washing) return;
 
         elapsed += Time.deltaTime;

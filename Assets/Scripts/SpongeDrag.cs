@@ -18,8 +18,10 @@ public class SpongeDrag : MonoBehaviour
     [Tooltip("Table.png 中有颜色的桌面范围，单位为贴图像素（左下角为原点）。")]
     [SerializeField] private Rect tabletopPixels = new Rect(58f, 128f, 99f, 57f);
     [SerializeField, Min(1)] private int yellowBrushRadius = 4;
-    [Tooltip("每笔擦掉的污渍透明度（0-255）。255/3≈85 → 同一处约 3 笔擦净。高级海绵一擦全净，用不到这个值。")]
-    [SerializeField, Range(1, 255)] private int scrubAlphaStep = 85;
+    [Tooltip("每笔擦掉的污渍透明度（0-255）。30 → 同一处约 9 笔见底（255/30 = 8.5）。\n" +
+             "历史值 85 只要 3 笔，扫一遍就整片归零，等于没有「一层层变淡」这个过程。\n" +
+             "高级海绵是碰到即整盘淡出，用不到这个值。")]
+    [SerializeField, Range(1, 255)] private int scrubAlphaStep = 30;
     [Tooltip("留空自动在本物体上找；找不到就没有惯性（松手即停）。")]
     [SerializeField] private DragInertia inertia;
 

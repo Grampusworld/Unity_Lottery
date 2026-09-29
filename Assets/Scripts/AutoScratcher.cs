@@ -37,13 +37,9 @@ public class AutoScratcher : MonoBehaviour
 
     [Header("References")]
     [SerializeField] private HoverJelly jelly;
+    [Tooltip("进度环。尺寸与位置都归它自己算（环在机器**正上方**，直径 = 可见内容宽 × sizeRatio），" +
+             "这里只在等级/几何变化时把「我多大、内容中心在哪」推过去。")]
     [SerializeField] private WasherProgressRing ring;
-    [Tooltip("进度环的根物体（世界空间 Canvas）。每换一次等级都要跟着机身高低重摆。")]
-    [SerializeField] private Transform ringRoot;
-    [Tooltip("进度环直径 = 可见内容高 × 该系数。机器是竖长的，圆环按内容高度换算，" +
-             "0.9 左右正好贴着机身轮廓；用 sprite.bounds 会大出一圈飘在机身外面。")]
-    [SerializeField] private float ringSizeRatio = 0.9f;
-    [SerializeField] private int ringTextureSize = 128;
     [SerializeField] private ScratcherEffect effect;
     [Tooltip("迷你票的容器：必须是 scale = 1 的独立物体，否则会被机身缩放带跑。")]
     [SerializeField] private Transform ticketContainer;
@@ -93,6 +89,7 @@ public class AutoScratcher : MonoBehaviour
     private Vector3 entryFrom;
     private Vector3 entryTo;
     private Vector3 baseLossyScale = Vector3.one;
+    private Vector3 lastLayoutPosition;
 
     public bool Unlocked => unlocked;
     public int Count => slots.Count;
@@ -129,6 +126,7 @@ public class AutoScratcher : MonoBehaviour
         // 静止尺寸只取一次，且必须避开果冻缩放（否则工作区会跟着抖）。
         baseLossyScale = transform.lossyScale;
         body.enabled = false;
+        lastLayoutPosition = transform.position;
     }
 
     private void OnDestroy() => ClearAll(false);
@@ -146,6 +144,9 @@ public class AutoScratcher : MonoBehaviour
 
         ApplyTier(tier);
         body.enabled = active;
+        // ApplyTier 在「等级没变」时会 early-return（ApplyTierVisuals 也就不会跑），
+        // 所以锚点必须在这里再无条件推一次，否则第二次 Configure 之后环会停在旧位置。
+        UpdateRingAnchor();
 
         if (!active)
         {
@@ -296,30 +297,30 @@ public class AutoScratcher : MonoBehaviour
 
         WorkRectLocal(out Vector2 center, out Vector2 size);
         if (effect != null) effect.SetWorkRect(center, size, body);
-        PlaceRing();
+        UpdateRingAnchor();
     }
 
-    // 进度环是**同级**物体（不能做子物体：机身 scale 38 会把 Canvas 一起放大，
-    // 而且果冻缩放会带着环一起抖），位置里没有任何脚本在改它 ——
-    // 所以换等级和拖动都得主动摆一次。
-    private void PlaceRing()
+    // 把「机身可见内容包围盒」推给进度环。位置与尺寸由环自己算：
+    // 直径 = 内容宽 × sizeRatio，环心 = 内容顶边 + 间隙 + 半径 —— 环落在机身正上方，与机身零重叠。
+    //
+    // 用 contentRect（实测不透明区）而不是 sprite.bounds：三张素材都是 64×64 且四边留白不一，
+    // sprite.bounds 会让环比机身可见宽还大（旧版本就是 30.4 vs 17.5，环飘在机外一圈）。
+    private void UpdateRingAnchor()
     {
-        if (ringRoot == null || body == null || body.sprite == null) return;
-        // 进度环按**可见内容**定尺寸与位置。三张素材都是 64×64 且四边有透明留白，
-        // 直接拿 sprite.bounds.size 会让环比机身宽出 70%，看着像飘在旁边的一道光圈。
-        ContentRectWorld(out Vector3 contentCenter, out Vector2 contentSize);
-        ringRoot.position = new Vector3(contentCenter.x, contentCenter.y, ringRoot.position.z);
-        float world = contentSize.y * ringSizeRatio;
-        float scale = world / Mathf.Max(1, ringTextureSize);
-        ringRoot.localScale = new Vector3(scale, scale, 1f);
+        if (ring == null || body == null || body.sprite == null) return;
+        ContentRectWorld(out Vector3 center, out Vector2 size);
+        ring.SetMachineAnchor(body, center, size);
     }
 
-    // 机身位置被拖动/滑行改动时每帧调用：机内所有坐标都是按 transform.position 现算的
-    // 绝对坐标，不重排就会留在原地（槽位里的迷你票、已经在跑的那几张、进度环）。
-    public void FollowMachine()
+    // 机身只在**真的动了**的时候才重排内部的绝对坐标（槽位里的迷你票）。
+    // 拖动 / 惯性滑行 / 入场下落三条路径都会经过这里 —— 以前靠 MachineDrag 显式调
+    // FollowMachine()，而它在滑行分支直接 return，于是甩一把机器、一槽迷你票就留在原地。
+    private void LateUpdate()
     {
+        Vector3 now = transform.position;
+        if (now == lastLayoutPosition) return;
+        lastLayoutPosition = now;
         RelayoutSlots();
-        PlaceRing();
     }
 
     // 可见内容包围盒（世界空间：中心 + 尺寸）。抓取判定与拖动夹取都用它 ——

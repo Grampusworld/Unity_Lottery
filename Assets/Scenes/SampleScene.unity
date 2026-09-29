@@ -1172,9 +1172,6 @@ MonoBehaviour:
     maxColumns: 2
   jelly: {fileID: 209671267}
   ring: {fileID: 470330287}
-  ringRoot: {fileID: 470330290}
-  ringSizeRatio: 0.9
-  ringTextureSize: 128
   effect: {fileID: 1433652124}
   ticketContainer: {fileID: 12483219}
   slotFill: 0.84
@@ -2239,7 +2236,9 @@ MonoBehaviour:
   ringImage: {fileID: 1009474626}
   canvasGroup: {fileID: 470330288}
   ringColor: {r: 1, g: 0.78, b: 0.32, a: 1}
-  fillSteps: 24
+  fillSteps: 0
+  sizeRatio: 0.36
+  bottomGap: 1
   fadeInDuration: 0.15
   fadeOutDuration: 0.1
 --- !u!225 &470330288
@@ -2287,7 +2286,7 @@ RectTransform:
   m_GameObject: {fileID: 470330286}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.1389375, y: 0.1389375, z: 1}
+  m_LocalScale: {x: 0.047025, y: 0.047025, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1009474628}
@@ -2295,7 +2294,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 42, y: -20.119999}
+  m_AnchoredPosition: {x: 51.1, y: -12.730401}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &493676255
@@ -3078,6 +3077,7 @@ MonoBehaviour:
     width: 99
     height: 57
   yellowBrushRadius: 4
+  scrubAlphaStep: 30
   inertia: {fileID: 607013240}
 --- !u!212 &607013237
 SpriteRenderer:
@@ -3855,7 +3855,6 @@ MonoBehaviour:
   displaySprite: {fileID: 1130622825819119533, guid: 723f3d1468dc54442a380edd22ec32fa, type: 3}
   feeder: {fileID: 700004533}
   ring: {fileID: 1730653905}
-  ringRoot: {fileID: 0}
   water: {fileID: 2139225081}
 --- !u!212 &700004531
 SpriteRenderer:
@@ -3984,7 +3983,7 @@ MonoBehaviour:
   hitSource: 1
   worldRenderer: {fileID: 700004531}
   worldCamera: {fileID: 0}
-  amplitude: 0.055839907
+  amplitude: 0.051544532
   squashRatio: 0
   settleTime: 0.22
   releaseTime: 0.16
@@ -9411,7 +9410,9 @@ MonoBehaviour:
   ringImage: {fileID: 145941204}
   canvasGroup: {fileID: 1730653906}
   ringColor: {r: 0.36, g: 0.85, b: 1, a: 1}
-  fillSteps: 24
+  fillSteps: 0
+  sizeRatio: 0.36
+  bottomGap: 1
   fadeInDuration: 0.15
   fadeOutDuration: 0.1
 --- !u!225 &1730653906
@@ -9459,7 +9460,7 @@ RectTransform:
   m_GameObject: {fileID: 1730653904}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.23924999, y: 0.23924999, z: 1}
+  m_LocalScale: {x: 0.083362505, y: 0.083362505, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 145941206}
@@ -9467,7 +9468,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 78, y: -27}
+  m_AnchoredPosition: {x: 78, y: -9.2248}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1764032594

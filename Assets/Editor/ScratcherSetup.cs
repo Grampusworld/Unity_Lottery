@@ -6,7 +6,7 @@ using UnityEngine.Events;
 using UnityEngine.UI;
 
 // 一键装配自动刮彩票机：三段素材导入 + 机身 + 刮擦特效 + 进度环 + 迷你票容器 + 果冻，
-// 同时把 GadgetsPanel 从 4 行 × 190px 改成 7 行 × 120px，腾出机器需要的三个按钮。
+// 同时把 GadgetsPanel 从 4 行 × 190px 改成 7 行 × 108px，腾出机器需要的三个按钮。
 // 菜单：Tools/挂个爽/一键装配自动刮彩票机
 //
 // 幂等：重复点只会把参数改回目标值，按名字复用已有物体，不会重复创建、不会重复挂 onClick。
@@ -30,16 +30,21 @@ public static class ScratcherSetup
     private const int MachineSortingOrder = 4;           // 与洗盘机同层；两台机器不同时占同一片区域
     private const int MiniSortingBoost = 6;              // 迷你票：机身 0→6 / 数字 1→7 / 涂层 2→8
     private const float EffectSortingOffset = 5f;        // 特效 → 9，盖在迷你票上面
-    // 进度环直径 = 可见内容高 × 该系数。机身是竖长的（可见 17.5×22.4），
-    // 圆环按内容高度换算才不会溢出到机身外面。
-    private const float RingSizeRatio = 0.9f;
+    // 进度环直径 = 可见内容**宽度** × 该系数（不是高度）。两台机器高度接近（22.9 / 19.8~23.2），
+    // 按高度算两个环会几乎一样大；按宽度算才拉得开：洗盘机 29.64×0.36 ≈ 10.67，
+    // 刮票机 16.72×0.36 ≈ 6.02（T2 19.76×0.36 ≈ 7.11）。旧值 0.9 是「内容高 × 0.9」，直径 17.8~19.8。
+    private const float RingSizeRatio = 0.36f;
+    private const float RingBottomGap = 1f;      // 环底边与机身内容顶边的间隙（世界单位）
+    private const int RingFillSteps = 0;         // 0 = 不量化（逐帧连续填）
 
-    // GadgetsPanel：7 行 × 120 高，间距 10，首行中心距面板顶 70。
-    // 4×190+3×25 的旧布局只剩 80px 余量，塞不下第 5 个 190 高的按钮。
-    private const float GadgetRowTop = -70f;
+    // GadgetsPanel：7 行 × 108 高，行间隙 22，首行中心距面板顶 64（末行底边 -898，面板高 915）。
+    // 120/10 是历史值：后来为了让 4px 与 10px 分不出区别，把行间隙从 10 让到 22，
+    // 高度就压到 108 保面板高度不变（见 ref-ui-motion.md）。
+    // 菜单必须与场景一致，否则一跑就把 7 个按钮全改回 120/10 —— 与 WasherScale 同一类雷。
+    private const float GadgetRowTop = -64f;
     private const float GadgetRowStep = 130f;
     private const float GadgetButtonWidth = 590f;
-    private const float GadgetButtonHeight = 120f;
+    private const float GadgetButtonHeight = 108f;
     private const float GadgetButtonCenterX = 295f;
 
     private class TierDef
@@ -346,29 +351,28 @@ public static class ScratcherSetup
             Undo.RegisterCreatedObjectUndo(ringRoot, RingName);
         }
         Undo.RecordObject(ringRoot.transform, "Ring transform");
+        ringRoot.transform.rotation = Quaternion.identity;
 
-        Vector3 center = ringRoot.transform.position;
-        float world = 0f;
+        // 可见内容包围盒（世界空间）。与运行时 ContentRectWorld 同一套算法：contentRect 是实测的
+        // 不透明区、pivot 落在内容底边中点，所以 transform.position 既不是矩形中心、
+        // sprite.bounds 也不是可见范围（三张素材都是 64×64 且四边留白不一）。
+        Vector3 contentCenter;
+        Vector2 contentSize;
         if (Tiers.Length > 0 && Tiers[0].contentRect.z > 0.5f)
         {
-            // 与运行时 ApplyTierVisuals 同一套算法：按可见内容定位/定尺寸。
             Vector4 r = Tiers[0].contentRect;
             float pivotX = 32f;
             float pivotY = Tiers[0].pivotYTexel;
             float cx = (r.x + r.z * 0.5f - pivotX) / 100f * MachineScale;
             float cy = (r.y + r.w * 0.5f - pivotY) / 100f * MachineScale;
-            center = machine.transform.position + new Vector3(cx, cy, 0f);
-            world = r.w / 100f * MachineScale * RingSizeRatio;
+            contentCenter = machine.transform.position + new Vector3(cx, cy, 0f);
+            contentSize = new Vector2(r.z / 100f * MachineScale, r.w / 100f * MachineScale);
         }
         else
         {
-            center = body.bounds.center;
-            world = body.bounds.size.y * RingSizeRatio;
+            contentCenter = body.bounds.center;
+            contentSize = body.bounds.size;
         }
-        ringRoot.transform.SetPositionAndRotation(
-            new Vector3(center.x, center.y, machine.transform.position.z), Quaternion.identity);
-        float canvasScale = world / 128f;
-        ringRoot.transform.localScale = new Vector3(canvasScale, canvasScale, 1f);
 
         Canvas canvas = ringRoot.GetComponent<Canvas>();
         if (canvas == null) canvas = Undo.AddComponent<Canvas>(ringRoot);
@@ -415,8 +419,15 @@ public static class ScratcherSetup
         so.FindProperty("ringImage").objectReferenceValue = image;
         so.FindProperty("canvasGroup").objectReferenceValue = group;
         so.FindProperty("ringColor").colorValue = new Color(1f, 0.78f, 0.32f, 1f);   // 金色，与洗盘机的青蓝区分
+        // 位置参数与运行时同一套字段。不回写就留着场景里的旧值（旧环 = 内容高 × 0.9，直径还随等级变）。
+        so.FindProperty("fillSteps").intValue = RingFillSteps;
+        so.FindProperty("sizeRatio").floatValue = RingSizeRatio;
+        so.FindProperty("bottomGap").floatValue = RingBottomGap;
         so.ApplyModifiedPropertiesWithoutUndo();
         EditorUtility.SetDirty(ring);
+
+        // 位置与尺寸交给环自己算（环落在机身**正上方**，与机身零重叠）。
+        ring.SetMachineAnchor(body, contentCenter, contentSize);
         return ring;
     }
 
@@ -432,9 +443,6 @@ public static class ScratcherSetup
         so.FindProperty("effect").objectReferenceValue = effect;
         so.FindProperty("ticketContainer").objectReferenceValue = container;
         so.FindProperty("miniSortingBoost").intValue = MiniSortingBoost;
-        so.FindProperty("ringSizeRatio").floatValue = RingSizeRatio;
-        so.FindProperty("ringTextureSize").intValue = 128;
-        if (ring != null) so.FindProperty("ringRoot").objectReferenceValue = ring.transform;
 
         var tiers = so.FindProperty("tiers");
         tiers.arraySize = Tiers.Length;
@@ -641,7 +649,7 @@ public static class ScratcherSetup
           .Append(" bounds=").Append(body.bounds.size.ToString("F2")).Append(" | ");
 
         var so = new SerializedObject(scratcher);
-        string[] fields = { "jelly", "ring", "ringRoot", "effect", "ticketContainer" };
+        string[] fields = { "jelly", "ring", "effect", "ticketContainer" };
         foreach (string field in fields)
         {
             var prop = so.FindProperty(field);
