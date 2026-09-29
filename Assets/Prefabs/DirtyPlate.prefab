@@ -103,6 +103,8 @@ GameObject:
   - component: {fileID: 7878933579513822636}
   - component: {fileID: 4819309319950690216}
   - component: {fileID: 4586695651014672673}
+  - component: {fileID: 5586783168800185613}
+  - component: {fileID: 7767332232261718565}
   m_Layer: 0
   m_Name: DirtyPlate
   m_TagString: Untagged
@@ -200,3 +202,62 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DirtyPlate
   dirtRenderer: {fileID: 4369394736194017091}
   cleanThreshold: 0.85
+--- !u!114 &5586783168800185613
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8877961831916804575}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 522219edc246e4ac3870fc479ca19198, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HoverJelly
+  hitSource: 1
+  worldRenderer: {fileID: 0}
+  worldCamera: {fileID: 0}
+  amplitude: 0.0909
+  squashRatio: 0
+  settleTime: 0.22
+  releaseTime: 0.16
+  damping: 0.32
+  verticalLag: 0.78
+  counterScaleText: 1
+  pressPulse: 1
+  pressPulseStrength: 1.8
+  pressPulseDuration: 0.1
+--- !u!114 &7767332232261718565
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8877961831916804575}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b9fd78177b3d424cb61565f63968e79, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlateFlyIn
+  flightTime: 0.6
+  minFlightTime: 0.4
+  maxFlightTime: 0.71
+  referenceDistance: 100
+  spawnViewportMargin: 0.12
+  arcHeight: 6
+  stretchGain: 0.085
+  maxStretch: 0.15
+  squashRatio: 0.65
+  settleTime: 0.5
+  landingSquash: 0.15
+  bounceHeight: 1.6
+  reducedTimeScale: 0.45
+  tableArea:
+    serializedVersion: 2
+    x: -28.3
+    y: -37.3
+    width: 124.6
+    height: 75.1
+  clearanceScale: 1.1
+  maxAttempts: 48
+  jelly: {fileID: 5586783168800185613}

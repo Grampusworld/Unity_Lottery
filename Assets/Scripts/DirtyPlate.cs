@@ -14,6 +14,15 @@ public class DirtyPlate : MonoBehaviour
     private int width, height, originalCount, erasedCount;
     private bool completed;
 
+    // 海绵能不能擦到这个盘子。飞入动画期间为 false，接触桌面那一帧才置 true（见 PlateFlyIn）。
+    //
+    // 刻意不复用 enabled：那个开关已经被「脏图层贴图不可读」这条错误路径占用了，
+    // 一旦共用，飞入动画的开关状态会和损坏标记互相覆盖。
+    //
+    // 默认 true：没挂飞入动画的盘子立刻可擦，不会因为漏挂组件就永久擦不掉。
+    // 属性初始化而不是序列化字段 —— 序列化值会跟着 Prefab 走，那种默认值失效的坑项目里踩过三次。
+    public bool Ready { get; set; } = true;
+
     private void Awake()
     {
         if (dirtRenderer == null || dirtRenderer.sprite == null)
@@ -59,7 +68,7 @@ public class DirtyPlate : MonoBehaviour
 
     public void ScrubAt(Vector3 worldPosition, int brushRadius)
     {
-        if (!enabled || completed || runtimeTexture == null || game == null) return;
+        if (!Ready || !enabled || completed || runtimeTexture == null || game == null) return;
         Vector3 local = dirtRenderer.transform.InverseTransformPoint(worldPosition);
         int cx = Mathf.FloorToInt(local.x * runtimeSprite.pixelsPerUnit + runtimeSprite.pivot.x);
         int cy = Mathf.FloorToInt(local.y * runtimeSprite.pixelsPerUnit + runtimeSprite.pivot.y);
