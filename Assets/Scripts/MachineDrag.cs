@@ -49,7 +49,7 @@ public class MachineDrag : MonoBehaviour
     private bool registered;
 
     private Vector3 designPosition;
-    private Vector3 grabOffset;      // 鼠标世界点 → 可见内容中心
+    private Vector3 grabOffset;      // 鼠标世界点 → 机身 transform.position（pivot），**不是**可见内容中心
     private bool dragging;
 
     public bool IsDragging => dragging;
@@ -136,7 +136,12 @@ public class MachineDrag : MonoBehaviour
         if (!ContainsPoint(world)) return;
 
         dragging = true;
-        grabOffset = transform.position + centerOffset - world;
+        // 抓取偏移必须和 ClampDrag 的入参语义对齐 —— 它的入参是「机身 transform.position」，
+        // centerOffset 由它自己补。所以这里只能按 pivot 记。
+        // 用可见内容中心记（`transform.position + centerOffset - world`）会多补一次 centerOffset，
+        // 按下后第一帧整机向上跳 centerOffset：刮票机 9.9~11.6 世界单位（142~167px，随等级变）。
+        // 洗盘机的 pivot 在贴图中心、centerOffset 恒为 0，同一个 bug 在它身上乘数是零，所以看不出来。
+        grabOffset = transform.position - world;
         if (inertia != null) inertia.BeginDrag();
         if (jelly != null) jelly.SetPressed(true);
     }
@@ -233,6 +238,9 @@ public class MachineDrag : MonoBehaviour
 
     // 拖动与滑行共用同一个夹取：先夹进可拖范围，再按实体碰撞推回。
     // DragInertia.Clamp 也指向它 —— 两条路必须完全同一套数学，否则滑行会滑进拖不进去的地方。
+    //
+    // 入参契约：`desired` 是**机身 transform.position（pivot）**，不是可见内容中心；
+    // centerOffset 由这里补。抓取偏移（grabOffset）必须按同一套语义记，否则按下会跳一段。
     private Vector3 ClampDrag(Vector3 desired)
     {
         if (inputCamera == null) return desired;

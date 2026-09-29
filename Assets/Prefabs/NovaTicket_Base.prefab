@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 916077032286242165}
   - component: {fileID: 5442622967294247695}
   - component: {fileID: 476247831958957924}
+  - component: {fileID: 2263812049723707868}
   m_Layer: 0
   m_Name: NovaTicket_Base
   m_TagString: Untagged
@@ -134,7 +135,7 @@ MonoBehaviour:
   landingSquash: 0.15
   bounceHeight: 1.6
   reducedTimeScale: 0.45
-  jelly: {fileID: 0}
+  jelly: {fileID: 2263812049723707868}
 --- !u!114 &476247831958957924
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -154,7 +155,32 @@ MonoBehaviour:
   dragSortingBoost: 12
   returnTime: 0.26
   inputCamera: {fileID: 0}
-  jelly: {fileID: 0}
+  jelly: {fileID: 2263812049723707868}
+--- !u!114 &2263812049723707868
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 92131731240837190}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 522219edc246e4ac3870fc479ca19198, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HoverJelly
+  hitSource: 1
+  worldRenderer: {fileID: 847683276831815324}
+  worldCamera: {fileID: 0}
+  amplitude: 0.0246
+  squashRatio: 0
+  settleTime: 0.22
+  releaseTime: 0.16
+  damping: 0.32
+  verticalLag: 0.78
+  counterScaleText: 1
+  pressPulse: 1
+  pressPulseStrength: 1.8
+  pressPulseDuration: 0.1
 --- !u!1 &549329266618939383
 GameObject:
   m_ObjectHideFlags: 0

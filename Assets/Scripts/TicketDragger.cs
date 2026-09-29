@@ -144,10 +144,15 @@ public class TicketDragger : MonoBehaviour
         grabbed = true;
         holding = false;
         if (cover != null) cover.InputEnabled = false;
+        // 顺序要紧：先挂起果冻**再**写 scale。`jelly.enabled = false` 会同步触发 OnDisable →
+        // ResetToRest 写一次 localScale（复位成基准值），写在抬起之后就会把 1.06 抹掉。
+        // 抬起期间的 localScale 归本组件独占：1.06 是个**持续**状态，弹簧脉冲表达不了它，
+        // 果冻一写就会把它覆盖掉（症状是「抬起又马上缩回去」）。
+        // 那一记「拿起来弹一下」挪到松手时（Drop）—— 语义上正好是放下时落一下。
+        if (jelly != null) jelly.enabled = false;
         if (body != null) body.sortingOrder = bodyOrder + dragSortingBoost;
         if (coverRenderer != null) coverRenderer.sortingOrder = coverOrder + dragSortingBoost;
         transform.localScale = new Vector3(baseScale.x * liftScale, baseScale.y * liftScale, baseScale.z);
-        if (jelly != null) jelly.Pulse(1f, 0.16f);
     }
 
     private void Follow(Vector3 world)
@@ -166,9 +171,16 @@ public class TicketDragger : MonoBehaviour
 
         if (game.TryFeedTicket(ticket, world))
         {
-            // 已被机器接收：机器会接管这个 GameObject，本组件到此为止。
+            // 已被机器接收：机器会接管这个 GameObject（AutoScratcher.TryAccept 会把果冻关掉），
+            // 本组件到此为止，不要再把果冻开回来。
             enabled = false;
             return;
+        }
+        // 交还给果冻：先写完 baseScale 再开，同帧两个源写 localScale 一定会互相覆盖。
+        if (jelly != null)
+        {
+            jelly.enabled = true;
+            jelly.Pulse(1f, 0.16f);
         }
         BeginReturn();
     }

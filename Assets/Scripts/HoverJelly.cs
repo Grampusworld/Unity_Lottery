@@ -89,6 +89,7 @@ public class HoverJelly : MonoBehaviour, IPointerEnterHandler, IPointerExitHandl
     private bool pulseEngaged;          // 从 Pulse 到收敛期间，弹簧时长按此比例压缩
     private bool lastInteractable = true;
     private bool reduced;
+    private bool initialized;             // Awake 跑完了没有（见 OnDisable 的说明）
 
     private void Awake()
     {
@@ -113,6 +114,7 @@ public class HoverJelly : MonoBehaviour, IPointerEnterHandler, IPointerExitHandl
         CollectTextCounters();
         reduced = HoverJellySettings.ReducedMotion;
         HoverJellySettings.Changed += OnSettingsChanged;
+        initialized = true;
     }
 
     private void OnDestroy() => HoverJellySettings.Changed -= OnSettingsChanged;
@@ -123,7 +125,15 @@ public class HoverJelly : MonoBehaviour, IPointerEnterHandler, IPointerExitHandl
         ResetToRest();
     }
 
-    private void OnDisable() => ResetToRest();
+    // Awake 之前就被别的组件禁用时（同一物体上的入场动画在它自己的 Awake 里把果冻关掉，
+    // 而组件之间的 Awake 顺序不保证）：这时候 baseScale 还是默认的 (1,1,1)，
+    // 复位会把整个物体缩成 1 —— 而且紧接着的 Awake 会把那个错误缩放当成基准记下来，
+    // 之后每次悬停都把物体缩到 1/48。此刻物体的 scale 本来就是原始值，没有需要复位的东西，直接跳过。
+    private void OnDisable()
+    {
+        if (!initialized) return;
+        ResetToRest();
+    }
 
     private void Update()
     {

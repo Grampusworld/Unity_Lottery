@@ -77,6 +77,9 @@ public class TicketFlyIn : MonoBehaviour
 
         transform.position = start;
         SetInteractable(false);
+        // 飞行期间的挤压拉伸独占 localScale：果冻同帧再写一次就是两个源抢同一个属性。
+        // 落地那一帧先写完 (1,1) 再把它开回来（见 Update 末尾）。
+        if (jelly != null) jelly.enabled = false;
         IsFlying = true;
     }
 
@@ -100,7 +103,12 @@ public class TicketFlyIn : MonoBehaviour
         ApplyScale(1f, 1f);
         IsFlying = false;
         SetInteractable(true);
-        if (jelly != null) jelly.Pulse(0.9f, 0.22f);
+        // 必须先写完最后一帧 scale 再开果冻，否则同一帧两个源都会写 localScale。
+        if (jelly != null)
+        {
+            jelly.enabled = true;
+            jelly.Pulse(0.9f, 0.22f);     // 落地这一记脉冲照旧
+        }
         if (Landed != null) Landed();
     }
 

@@ -212,6 +212,11 @@ public class AutoScratcher : MonoBehaviour
         ScratchCard cover = node.GetComponentInChildren<ScratchCard>(true);
         if (cover != null) cover.InputEnabled = false;     // 机内的票不该再被玩家刮
 
+        // 票自己的悬停果冻也要关掉：槽位动画每帧写 node.localScale（入槽 lerp + 处理中的抖动），
+        // 果冻同帧再写一次就是两个源抢同一个属性 —— 症状是迷你票在槽里抖、尺寸不对。
+        HoverJelly ticketJelly = node.GetComponent<HoverJelly>();
+        if (ticketJelly != null) ticketJelly.enabled = false;
+
         Vector3 enterFrom = node.position;
         Vector3 fromScale = fly != null ? fly.BaseScale : node.localScale;
         node.SetParent(ticketContainer, true);   // 容器 scale = 1，localScale 即世界缩放
