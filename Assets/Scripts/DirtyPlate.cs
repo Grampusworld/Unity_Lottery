@@ -66,6 +66,22 @@ public class DirtyPlate : MonoBehaviour
 
     public void Initialize(LotteryGame owner) => game = owner;
 
+    // 参与实体碰撞：机器不能被拖到已经落桌的盘子上。
+    // 盘子是运行时 Instantiate 的，编辑期没有连线对象，所以由它自己登记。
+    // 不透明区就是 sprite 子矩形（58×58，已扣掉纹理那 3px 边框），与 HoverJelly 的命中区同一套。
+    private void OnEnable()
+    {
+        SpriteRenderer body = GetComponent<SpriteRenderer>();
+        if (body == null || body.sprite == null) return;
+        Vector3 scale = transform.lossyScale;
+        Vector3 size = Vector3.Scale(body.sprite.bounds.size, scale);
+        Vector3 center = Vector3.Scale(body.sprite.bounds.center, scale);
+        DragBodyRegistry.Register(this, DragBodyKind.Plate, transform, center,
+            new Vector2(Mathf.Abs(size.x), Mathf.Abs(size.y)) * 0.5f);
+    }
+
+    private void OnDisable() => DragBodyRegistry.Unregister(this);
+
     public void ScrubAt(Vector3 worldPosition, int brushRadius)
     {
         if (!Ready || !enabled || completed || runtimeTexture == null || game == null) return;

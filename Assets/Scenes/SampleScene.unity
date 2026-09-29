@@ -1133,6 +1133,8 @@ GameObject:
   - component: {fileID: 209671267}
   - component: {fileID: 209671266}
   - component: {fileID: 209671270}
+  - component: {fileID: 209671272}
+  - component: {fileID: 209671271}
   m_Layer: 0
   m_Name: Auto Lottery Machine
   m_TagString: Untagged
@@ -1280,7 +1282,7 @@ Transform:
   m_GameObject: {fileID: 209671265}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 53.1, y: -36.5, z: 0}
+  m_LocalPosition: {x: 51.1, y: -36.5, z: 0}
   m_LocalScale: {x: 38, y: 38, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -1307,6 +1309,49 @@ MonoBehaviour:
   belowOffset: 2.2
   normalColor: {r: 0.9647059, g: 0.92156863, b: 0.8039216, a: 1}
   fullColor: {r: 0.7764706, g: 0.61960787, b: 0.2509804, a: 1}
+--- !u!114 &209671271
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 209671265}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 34ee3baee93d74b1bbb6b8922e4bf60d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MachineDrag
+  scratcher: {fileID: 209671266}
+  washer: {fileID: 0}
+  edgeMargin: 0.75
+  tableSurface: {fileID: 1588743650}
+  tabletopPixels:
+    serializedVersion: 2
+    x: 58
+    y: 128
+    width: 99
+    height: 57
+  inputCamera: {fileID: 519420031}
+  inertia: {fileID: 209671272}
+  jelly: {fileID: 209671267}
+--- !u!114 &209671272
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 209671265}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 14a8cb1dd4be742908952efecfc5cf59, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DragInertia
+  speedSmoothing: 0.045
+  maxSpeed: 90
+  deceleration: 320
+  stopSpeed: 0.8
+  bounce: 0.4
+  reducedDecelFactor: 3
 --- !u!1 &235285733
 GameObject:
   m_ObjectHideFlags: 0
@@ -3002,6 +3047,7 @@ GameObject:
   - component: {fileID: 607013237}
   - component: {fileID: 607013236}
   - component: {fileID: 607013239}
+  - component: {fileID: 607013240}
   m_Layer: 0
   m_Name: Dish Sponge - Yellow
   m_TagString: Untagged
@@ -3032,6 +3078,7 @@ MonoBehaviour:
     width: 99
     height: 57
   yellowBrushRadius: 4
+  inertia: {fileID: 607013240}
 --- !u!212 &607013237
 SpriteRenderer:
   serializedVersion: 3
@@ -3101,7 +3148,7 @@ Transform:
   m_GameObject: {fileID: 607013235}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 36, y: -32.4, z: 0}
+  m_LocalPosition: {x: 34, y: -32.4, z: 0}
   m_LocalScale: {x: 18, y: 18, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -3132,6 +3179,24 @@ MonoBehaviour:
   pressPulse: 1
   pressPulseStrength: 1.8
   pressPulseDuration: 0.1
+--- !u!114 &607013240
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 607013235}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 14a8cb1dd4be742908952efecfc5cf59, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DragInertia
+  speedSmoothing: 0.045
+  maxSpeed: 90
+  deceleration: 320
+  stopSpeed: 0.8
+  bounce: 0.4
+  reducedDecelFactor: 3
 --- !u!1 &619394800
 GameObject:
   m_ObjectHideFlags: 0
@@ -3766,6 +3831,8 @@ GameObject:
   - component: {fileID: 700004530}
   - component: {fileID: 700004534}
   - component: {fileID: 700004533}
+  - component: {fileID: 700004536}
+  - component: {fileID: 700004535}
   m_Layer: 0
   m_Name: Automatic Dish Washer
   m_TagString: Untagged
@@ -3788,6 +3855,7 @@ MonoBehaviour:
   displaySprite: {fileID: 1130622825819119533, guid: 723f3d1468dc54442a380edd22ec32fa, type: 3}
   feeder: {fileID: 700004533}
   ring: {fileID: 1730653905}
+  ringRoot: {fileID: 0}
   water: {fileID: 2139225081}
 --- !u!212 &700004531
 SpriteRenderer:
@@ -3926,6 +3994,49 @@ MonoBehaviour:
   pressPulse: 1
   pressPulseStrength: 1.8
   pressPulseDuration: 0.1
+--- !u!114 &700004535
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 700004529}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 34ee3baee93d74b1bbb6b8922e4bf60d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MachineDrag
+  scratcher: {fileID: 0}
+  washer: {fileID: 700004530}
+  edgeMargin: 0.75
+  tableSurface: {fileID: 1588743650}
+  tabletopPixels:
+    serializedVersion: 2
+    x: 58
+    y: 128
+    width: 99
+    height: 57
+  inputCamera: {fileID: 519420031}
+  inertia: {fileID: 700004536}
+  jelly: {fileID: 700004534}
+--- !u!114 &700004536
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 700004529}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 14a8cb1dd4be742908952efecfc5cf59, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DragInertia
+  speedSmoothing: 0.045
+  maxSpeed: 90
+  deceleration: 320
+  stopSpeed: 0.8
+  bounce: 0.4
+  reducedDecelFactor: 3
 --- !u!1 &727822275
 GameObject:
   m_ObjectHideFlags: 0

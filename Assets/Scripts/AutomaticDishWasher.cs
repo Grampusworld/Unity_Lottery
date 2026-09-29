@@ -28,10 +28,15 @@ public class AutomaticDishWasher : MonoBehaviour
     [SerializeField] private Sprite displaySprite;
     [SerializeField] private WasherPlateFeeder feeder;
     [SerializeField] private WasherProgressRing ring;
+    [Tooltip("进度环的根物体。与洗盘机**同级**（不是子物体），位置里没有任何脚本在改它 ——" +
+             "拖动时必须自己跟。留空会自动取 ring 所在的物体。")]
+    [SerializeField] private Transform ringRoot;
     [SerializeField] private WasherWaterEffect water;
 
     private SpriteRenderer display;
     private LotteryGame game;
+    private Vector3 ringOffset;
+    private Vector3 ringAnchor;
     private float elapsed;
     private float secondsPerCycle = 10f;
     private int platesPerCycle = 5;
@@ -44,6 +49,33 @@ public class AutomaticDishWasher : MonoBehaviour
         display.sprite = displaySprite;
         display.enabled = false;
         SetWater(false);
+        if (ringRoot == null && ring != null) ringRoot = ring.transform;
+        CaptureRingOffset();
+    }
+
+    // 进度环与机身是**同级**物体（做子物体会被机身 26 倍缩放带跑、还会被果冻抖），
+    // 编辑器里手摆出来的那个位置差就是它的挂载偏移。记下来，机身之后动到哪儿它跟到哪儿。
+    private void CaptureRingOffset()
+    {
+        if (ringRoot == null) return;
+        ringOffset = ringRoot.position - transform.position;
+        ringAnchor = transform.position;
+    }
+
+    // 机身位置被拖动/滑行改动时每帧调用。机内盘子与进度环都是绝对坐标，不重排就留在原地。
+    public void FollowMachine()
+    {
+        if (feeder != null) feeder.RefreshSlotPositions();
+        SyncRing();
+    }
+
+    // 只在机身真的动了才写 —— 每帧无条件写 transform 会把 Canvas 标脏。
+    private void SyncRing()
+    {
+        if (ringRoot == null) return;
+        if (transform.position == ringAnchor) return;
+        ringAnchor = transform.position;
+        ringRoot.position = transform.position + ringOffset;
     }
 
     // 只更新参数与显示：不播动画，也不打断正在跑的周期（速度升级时不能重置进度）。
@@ -124,6 +156,7 @@ public class AutomaticDishWasher : MonoBehaviour
 
     private void Update()
     {
+        SyncRing();
         if (!unlocked || game == null || state != State.Washing) return;
 
         elapsed += Time.deltaTime;

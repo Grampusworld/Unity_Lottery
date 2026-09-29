@@ -63,7 +63,22 @@ public class TicketDragger : MonoBehaviour
         if (body != null) bodyOrder = body.sortingOrder;
         if (coverRenderer != null) coverOrder = coverRenderer.sortingOrder;
         home = transform.position;
+        RegisterBody();
     }
+
+    // 登记成「票」。机器在按下那一帧必须给票让路 —— 机器按下即拖，而票要按住 0.22s
+    // 才拿得起来，不让路的话票一旦被压在机器上就永远抓不回来（软锁）。
+    // 这里只登记、**不参与碰撞**：票不与任何东西互斥（投喂判定用的是光标位置，不受阻挡影响）。
+    private void RegisterBody()
+    {
+        if (body == null || body.sprite == null) return;
+        Vector3 size = Vector3.Scale(body.sprite.bounds.size, baseScale);
+        Vector3 center = Vector3.Scale(body.sprite.bounds.center, baseScale);
+        DragBodyRegistry.Register(this, DragBodyKind.Ticket, transform, center,
+            new Vector2(Mathf.Abs(size.x), Mathf.Abs(size.y)) * 0.5f);
+    }
+
+    private void OnEnable() => RegisterBody();
 
     public void Initialize(LotteryGame owner, LotteryTicket ownerTicket)
     {
@@ -218,5 +233,6 @@ public class TicketDragger : MonoBehaviour
         RestoreOrders();
         transform.localScale = baseScale;
         if (cover != null) cover.InputEnabled = true;
+        DragBodyRegistry.Unregister(this);
     }
 }

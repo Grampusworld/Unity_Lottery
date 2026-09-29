@@ -24,7 +24,9 @@ public static class ScratcherSetup
     private const string PanelName = "GadgetsPanel";
 
     private const float MachineScale = 38f;              // 与洗盘机同高（约 22.4 世界单位），像素格 0.38
-    private static readonly Vector3 MachineFeet = new Vector3(42f, -30f, 0f);   // 机身底边中点
+    // 机身底边中点。2026-09-29 与海绵一起左移 2（机器间 gap 1.72 → 3.72）——
+    // 旧的 (42,-30) 连场景都对不上了，这里补正。
+    private static readonly Vector3 MachineFeet = new Vector3(51.1f, -36.5f, 0f);
     private const int MachineSortingOrder = 4;           // 与洗盘机同层；两台机器不同时占同一片区域
     private const int MiniSortingBoost = 6;              // 迷你票：机身 0→6 / 数字 1→7 / 涂层 2→8
     private const float EffectSortingOffset = 5f;        // 特效 → 9，盖在迷你票上面

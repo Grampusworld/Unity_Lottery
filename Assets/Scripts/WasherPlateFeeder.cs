@@ -62,6 +62,9 @@ public class WasherPlateFeeder : MonoBehaviour
     [SerializeField, Min(0.05f)] private float maxPulseDuration = 0.22f;
 
     private readonly List<Transform> plates = new List<Transform>();
+    // 正在飞入的盘子。机身被拖动时 RefreshSlotPositions 必须跳过它们 ——
+    // FlyIn 协程每帧在写 position，两边都写就是两个源抢同一个属性。
+    private readonly HashSet<Transform> inFlight = new HashSet<Transform>();
     private Coroutine feedRoutine;
     private int slotCursor;
     private Vector3 baseLossyScale = Vector3.one;
@@ -157,7 +160,11 @@ public class WasherPlateFeeder : MonoBehaviour
         for (int i = 0; i < count && plates.Count > 0; i++)
         {
             int last = plates.Count - 1;
-            if (plates[last] != null) Destroy(plates[last].gameObject);
+            if (plates[last] != null)
+            {
+                inFlight.Remove(plates[last]);
+                Destroy(plates[last].gameObject);
+            }
             plates.RemoveAt(last);
         }
         slotCursor = plates.Count;
@@ -166,12 +173,27 @@ public class WasherPlateFeeder : MonoBehaviour
     public void ClearPlates()
     {
         StopFeed();
+        inFlight.Clear();
         for (int i = plates.Count - 1; i >= 0; i--)
         {
             if (plates[i] != null) Destroy(plates[i].gameObject);
         }
         plates.Clear();
         slotCursor = 0;
+    }
+
+    // 机身位置被拖动/滑行改动时每帧调用：机内已就位的盘子必须重摆到新槽位。
+    // 飞行中的盘子不在这里改 —— FlyIn 每帧自己重算目标（见 FlyIn 里的注释）。
+    public void RefreshSlotPositions()
+    {
+        if (plates.Count == 0) return;
+        int total = Mathf.Max(1, plates.Count);
+        for (int i = 0; i < plates.Count; i++)
+        {
+            Transform plate = plates[i];
+            if (plate == null || inFlight.Contains(plate)) continue;
+            plate.position = SlotPosition(i, total);
+        }
     }
 
     private void StopFeed()
@@ -231,29 +253,38 @@ public class WasherPlateFeeder : MonoBehaviour
         Vector3 target = SlotPosition(index, Mathf.Max(1, total));
         plate.position = new Vector3(SpawnX(), target.y, target.z);
         plates.Add(plate);
-        StartCoroutine(FlyIn(plate, target, fly, pulseDuration, strength, delay));
+        StartCoroutine(FlyIn(plate, index, Mathf.Max(1, total), fly, pulseDuration, strength, delay));
     }
 
-    private IEnumerator FlyIn(Transform plate, Vector3 target, float duration,
+    private IEnumerator FlyIn(Transform plate, int index, int total, float duration,
         float pulseDuration, float strength, float delay)
     {
+        inFlight.Add(plate);
         if (delay > 0f) yield return new WaitForSeconds(delay);
 
         Vector3 start = plate.position;
         float time = 0f;
         while (time < duration)
         {
-            if (plate == null) yield break;   // 被 ClearPlates / RemovePlates 中途销毁
+            if (plate == null)   // 被 ClearPlates / RemovePlates 中途销毁
+            {
+                inFlight.Remove(plate);
+                yield break;
+            }
             time += Time.deltaTime;
             float k = Mathf.Clamp01(time / duration);
             float ease = 1f - Mathf.Pow(1f - k, 3f); // easeOutCubic：出发快、到位稳
+            // 目标**每帧重算**，而不是在出发时钉死：机身被拖动时槽位会整片移动，
+            // 抱住旧 target 的盘子会飞到一个已经不存在的位置上。
+            Vector3 target = SlotPosition(index, total);
             float x = Mathf.Lerp(start.x, target.x, ease);
             float y = Mathf.Lerp(start.y, target.y, ease) + Mathf.Sin(k * Mathf.PI) * arcHeight;
             plate.position = new Vector3(x, y, target.z);
             yield return null;
         }
 
-        plate.position = target;
+        inFlight.Remove(plate);
+        plate.position = SlotPosition(index, total);
         // 果冻与「盘子到位」精确同步：在这一帧打脉冲。
         if (washerJelly != null) washerJelly.Pulse(strength, pulseDuration);
     }

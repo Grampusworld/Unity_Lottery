@@ -286,8 +286,15 @@ public class AutoScratcher : MonoBehaviour
 
         WorkRectLocal(out Vector2 center, out Vector2 size);
         if (effect != null) effect.SetWorkRect(center, size, body);
+        PlaceRing();
+    }
 
-        if (ringRoot == null) return;
+    // 进度环是**同级**物体（不能做子物体：机身 scale 38 会把 Canvas 一起放大，
+    // 而且果冻缩放会带着环一起抖），位置里没有任何脚本在改它 ——
+    // 所以换等级和拖动都得主动摆一次。
+    private void PlaceRing()
+    {
+        if (ringRoot == null || body == null || body.sprite == null) return;
         // 进度环按**可见内容**定尺寸与位置。三张素材都是 64×64 且四边有透明留白，
         // 直接拿 sprite.bounds.size 会让环比机身宽出 70%，看着像飘在旁边的一道光圈。
         ContentRectWorld(out Vector3 contentCenter, out Vector2 contentSize);
@@ -295,6 +302,29 @@ public class AutoScratcher : MonoBehaviour
         float world = contentSize.y * ringSizeRatio;
         float scale = world / Mathf.Max(1, ringTextureSize);
         ringRoot.localScale = new Vector3(scale, scale, 1f);
+    }
+
+    // 机身位置被拖动/滑行改动时每帧调用：机内所有坐标都是按 transform.position 现算的
+    // 绝对坐标，不重排就会留在原地（槽位里的迷你票、已经在跑的那几张、进度环）。
+    public void FollowMachine()
+    {
+        RelayoutSlots();
+        PlaceRing();
+    }
+
+    // 可见内容包围盒（世界空间：中心 + 尺寸）。抓取判定与拖动夹取都用它 ——
+    // 三段素材都是 64×64 且四边有透明留白，而且 pivot 落在内容底边，
+    // 所以 transform.position 既不是矩形中心，sprite.bounds 也不是可见范围。
+    public bool TryGetContentRectWorld(out Vector3 center, out Vector2 size)
+    {
+        if (body == null || body.sprite == null)
+        {
+            center = transform.position;
+            size = Vector2.one;
+            return false;
+        }
+        ContentRectWorld(out center, out size);
+        return true;
     }
 
     private bool HasContentRect()

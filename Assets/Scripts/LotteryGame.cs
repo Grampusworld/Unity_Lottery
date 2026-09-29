@@ -110,6 +110,8 @@ public class LotteryGame : MonoBehaviour
         if (sponge != null) sponge.Initialize(this, purpleUnlocked);
         RefreshWasher();
         RefreshScratcher();
+        // 必须先回位再 BeginFromSave：PlaceInstantly 是拿机身当前坐标算槽位的。
+        ResetDragPositions();
         // 读档时洗盘机已经在跑：直接摆好机内盘子开始洗，不重播解锁入场。
         if (washerUnlocked && washer != null) washer.BeginFromSave();
         if (debugPanel != null) debugPanel.SetActive(false);
@@ -365,7 +367,7 @@ public class LotteryGame : MonoBehaviour
         SetProgress(luckyProgressFill, 0);
         SetProgress(goldProgressFill, 1);
         SetProgress(novaProgressFill, 2);
-        SetLabel(plateButton, currentPlate == null ? "ONE MORE PLATE  +$1" : "CLEAN THE PLATE FIRST");
+        SetLabel(plateButton, currentPlate == null ? "ONE MORE PLATE" : "CLEAN THE PLATE FIRST");
         SetButtonState(plateButton, BuyableState(currentPlate == null));
         SetLabel(purpleSpongeButton, purpleUnlocked ? "PURPLE SPONGE EQUIPPED\n2x BRUSH RADIUS" : "PURPLE SPONGE  $30\n2x BRUSH RADIUS");
         SetButtonState(purpleSpongeButton, purpleUnlocked
@@ -605,6 +607,26 @@ public class LotteryGame : MonoBehaviour
     private void OnApplicationPause(bool paused) { if (paused) SaveState(); }
     private void OnApplicationQuit() => SaveState();
 
+    // 两台机器与海绵都回设计位（场景里手摆的位置）。启动与 DebugResetProgress 调。
+    //
+    // **刻意不存档**：机器永远算盘子落点的禁区（见 ConfigurePlateLanding），
+    // 玩家把两台都推到桌子中间会永久压缩落点区域，这种局面不该被带到下一次启动。
+    private void ResetDragPositions()
+    {
+        ResetDrag(washer != null ? washer.gameObject : null);
+        ResetDrag(scratcher != null ? scratcher.gameObject : null);
+        if (sponge != null) sponge.ResetToDesignPosition();
+    }
+
+    // 机器上有没有 MachineDrag 是运行时才知道的（组件可能还没装配），
+    // 所以这里现取一次 —— 回位是低频操作，不值得为它加一条序列化引用。
+    private static void ResetDrag(GameObject target)
+    {
+        if (target == null) return;
+        MachineDrag drag = target.GetComponent<MachineDrag>();
+        if (drag != null) drag.ResetToDesignPosition();
+    }
+
     public void ToggleDebugMenu() { if (debugPanel != null) debugPanel.SetActive(!debugPanel.activeSelf); }
     public void DebugAddMoney() { balance += 1000; Commit(); }
     public void DebugUnlockAll()
@@ -652,6 +674,7 @@ public class LotteryGame : MonoBehaviour
         if (sponge != null) sponge.SetAdvanced(false);
         RefreshWasher();
         RefreshScratcher();
+        ResetDragPositions();
         RefreshUI();
     }
 }
