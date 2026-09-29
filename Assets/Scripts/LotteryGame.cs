@@ -236,6 +236,8 @@ public class LotteryGame : MonoBehaviour
         if (currentPlate != null || platePrefab == null || plateSpawnPoint == null) return;
         currentPlate = Instantiate(platePrefab, plateSpawnPoint.position, plateSpawnPoint.rotation);
         currentPlate.Initialize(this);
+        PlateDragger plateDragger = currentPlate.GetComponent<PlateDragger>();
+        if (plateDragger != null) plateDragger.Initialize(this);
         ConfigurePlateLanding(currentPlate);
         RefreshUI();
     }
@@ -379,7 +381,7 @@ public class LotteryGame : MonoBehaviour
         SetProgress(novaProgressFill, 2);
         SetLabel(plateButton, currentPlate == null ? "ONE MORE PLATE" : "CLEAN THE PLATE FIRST");
         SetButtonState(plateButton, BuyableState(currentPlate == null));
-        SetLabel(purpleSpongeButton, purpleUnlocked ? "PURPLE SPONGE EQUIPPED\n2x BRUSH RADIUS" : "PURPLE SPONGE  $30\n2x BRUSH RADIUS");
+        SetLabel(purpleSpongeButton, purpleUnlocked ? "PURPLE SPONGE EQUIPPED\nONE-WIPE CLEAN" : "PURPLE SPONGE  $30\nONE-WIPE CLEAN");
         SetButtonState(purpleSpongeButton, purpleUnlocked
             ? ButtonState.Completed
             : BuyableState(balance >= 30));

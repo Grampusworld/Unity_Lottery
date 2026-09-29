@@ -130,7 +130,7 @@ public class MachineDrag : MonoBehaviour
         if (!justPressed) return;
         // 让路：海绵画在机器上层（order 5 > 4）。
         if (DragBodyRegistry.Hit(world, DragBodyKind.Sponge)) return;
-        // 让路：票要按住 0.22s 才拿得起来，机器在按下这一帧就抢走了 ——
+        // 让路：票要按住 0.12s 才拿得起来，机器在按下这一帧就抢走了 ——
         // 票一旦被压在机器上就永远抓不回来。层次上票在机器下面，这里是刻意例外。
         if (DragBodyRegistry.Hit(world, DragBodyKind.Ticket)) return;
         if (!ContainsPoint(world)) return;

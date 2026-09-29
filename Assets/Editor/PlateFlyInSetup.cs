@@ -3,8 +3,8 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 
-// 给脏盘子 Prefab 一次挂上飞入动画与悬停果冻。
-// 菜单：Tools/挂个爽/给脏盘子挂飞入动画与悬停果冻
+// 给脏盘子 Prefab 一次挂上飞入动画、悬停果冻与拖拽。
+// 菜单：Tools/挂个爽/给脏盘子挂飞入动画果冻与拖拽（旧名「…飞入动画与悬停果冻」保留转发）
 //
 // 幂等：重复点只会把参数改回目标值，按名字复用已有组件，不会重复挂。
 //
@@ -24,6 +24,7 @@ public static class PlateFlyInSetup
     // 和海绵那套（0.1732 = 22 / 127px）是同一个标定，不是缩小版的相对比例。
     private const float JellyAmplitude = 0.0909f;
 
+    [MenuItem("Tools/挂个爽/给脏盘子挂飞入动画果冻与拖拽", false, 13)]
     [MenuItem("Tools/挂个爽/给脏盘子挂飞入动画与悬停果冻", false, 13)]
     public static void Run()
     {
@@ -62,6 +63,20 @@ public static class PlateFlyInSetup
             if (jellyProp != null) jellyProp.objectReferenceValue = jelly;
             flySo.ApplyModifiedPropertiesWithoutUndo();
 
+            PlateDragger dragger = root.GetComponent<PlateDragger>();
+            if (dragger == null) dragger = root.AddComponent<PlateDragger>();
+            SerializedObject dragSo = new SerializedObject(dragger);
+            WriteFloat(dragSo, "holdTime", 0.12f);
+            WriteFloat(dragSo, "moveTolerance", 0.45f);
+            WriteFloat(dragSo, "followLerp", 26f);
+            WriteFloat(dragSo, "liftScale", 1.06f);
+            WriteInt(dragSo, "dragSortingBoost", 12);
+            SerializedProperty dragJelly = dragSo.FindProperty("jelly");
+            if (dragJelly != null) dragJelly.objectReferenceValue = jelly;
+            SerializedProperty dragFly = dragSo.FindProperty("flyIn");
+            if (dragFly != null) dragFly.objectReferenceValue = flyIn;
+            dragSo.ApplyModifiedPropertiesWithoutUndo();
+
             PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
         }
         finally
@@ -85,6 +100,7 @@ public static class PlateFlyInSetup
         {
             HoverJelly jelly = root.GetComponent<HoverJelly>();
             PlateFlyIn flyIn = root.GetComponent<PlateFlyIn>();
+            PlateDragger dragger = root.GetComponent<PlateDragger>();
             System.Text.StringBuilder sb = new System.Text.StringBuilder();
             sb.Append("[PlateFlyInSetup] 读回 | jelly=").Append(jelly == null ? "<null>" : "ok");
             if (jelly != null)
@@ -106,6 +122,15 @@ public static class PlateFlyInSetup
                   .Append(" flight=").Append(so.FindProperty("flightTime").floatValue.ToString("F2"))
                   .Append("-").Append(so.FindProperty("minFlightTime").floatValue.ToString("F2"))
                   .Append("/").Append(so.FindProperty("maxFlightTime").floatValue.ToString("F2"));
+            }
+            sb.Append(" | dragger=").Append(dragger == null ? "<null>" : "ok");
+            if (dragger != null)
+            {
+                SerializedObject so = new SerializedObject(dragger);
+                sb.Append(" holdTime=").Append(so.FindProperty("holdTime").floatValue.ToString("F2"))
+                  .Append(" lift=").Append(so.FindProperty("liftScale").floatValue.ToString("F2"))
+                  .Append(" jellyRef=").Append(so.FindProperty("jelly").objectReferenceValue == null ? "<null>" : "ok")
+                  .Append(" flyInRef=").Append(so.FindProperty("flyIn").objectReferenceValue == null ? "<null>" : "ok");
             }
             Debug.Log(sb.ToString());
         }
@@ -134,7 +159,10 @@ public static class PlateFlyInSetup
             Debug.LogWarning("[PlateFlyInSetup] 字段不存在：" + name);
             return;
         }
-        prop.enumValueIndex = value;
+        // enumValueIndex 只对枚举字段合法；纯 int 字段（如 dragSortingBoost）必须走 intValue，
+        // 否则 Unity 报 "type is not a enum value" 且静默不写。
+        if (prop.propertyType == SerializedPropertyType.Enum) prop.enumValueIndex = value;
+        else prop.intValue = value;
     }
 
     private static void WriteRect(SerializedObject so, string name, Rect value)

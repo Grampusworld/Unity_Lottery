@@ -1,10 +1,18 @@
 using UnityEngine;
 
 // Erases only the separate dirt sprite. The clean plate sprite never changes.
+//
+// 清洁分两档（由 SpongeDrag 传入）：
+//   初级（黄）：每笔只把擦到的像素 alpha 降 alphaStep（255/3≈85）→ 同一处约 3 笔见底，
+//              视觉上污渍一层层变淡，玩家要反复来回擦。
+//   高级（紫）：fullClean = true，刷圈碰到**任意**一颗污渍像素 → 整盘污渍在
+//              fullCleanFadeTime 内淡出，然后正常结算。半径再翻倍只是锦上添花。
 public class DirtyPlate : MonoBehaviour
 {
     [SerializeField] private SpriteRenderer dirtRenderer;
     [SerializeField, Range(0.1f, 1f)] private float cleanThreshold = 0.85f;
+    [Tooltip("高级海绵一擦全净时，整盘污渍淡出的时长。")]
+    [SerializeField, Min(0.05f)] private float fullCleanFadeTime = 0.25f;
 
     private LotteryGame game;
     private Sprite originalSprite;
@@ -13,6 +21,9 @@ public class DirtyPlate : MonoBehaviour
     private Color32[] pixels;
     private int width, height, originalCount, erasedCount;
     private bool completed;
+    private bool fading;
+    private float fadeTimer;
+    private Color32[] fadeFrom;
 
     // 海绵能不能擦到这个盘子。飞入动画期间为 false，接触桌面那一帧才置 true（见 PlateFlyIn）。
     //
@@ -82,15 +93,16 @@ public class DirtyPlate : MonoBehaviour
 
     private void OnDisable() => DragBodyRegistry.Unregister(this);
 
-    public void ScrubAt(Vector3 worldPosition, int brushRadius)
+    public void ScrubAt(Vector3 worldPosition, int brushRadius, int alphaStep, bool fullClean)
     {
-        if (!Ready || !enabled || completed || runtimeTexture == null || game == null) return;
+        if (!Ready || !enabled || completed || fading || runtimeTexture == null || game == null) return;
         Vector3 local = dirtRenderer.transform.InverseTransformPoint(worldPosition);
         int cx = Mathf.FloorToInt(local.x * runtimeSprite.pixelsPerUnit + runtimeSprite.pivot.x);
         int cy = Mathf.FloorToInt(local.y * runtimeSprite.pixelsPerUnit + runtimeSprite.pivot.y);
         if (cx < -brushRadius || cy < -brushRadius || cx >= width + brushRadius || cy >= height + brushRadius) return;
 
         bool changed = false;
+        bool hit = false;
         for (int y = Mathf.Max(0, cy - brushRadius); y <= Mathf.Min(height - 1, cy + brushRadius); y++)
         for (int x = Mathf.Max(0, cx - brushRadius); x <= Mathf.Min(width - 1, cx + brushRadius); x++)
         {
@@ -98,14 +110,62 @@ public class DirtyPlate : MonoBehaviour
             if (dx * dx + dy * dy > brushRadius * brushRadius) continue;
             int index = y * width + x;
             if (pixels[index].a == 0) continue;
-            pixels[index].a = 0;
-            erasedCount++;
+            hit = true;
+            if (fullClean)
+            {
+                // 高级海绵只需要证明「碰到了污渍」，剩下的交给整盘淡出。
+                changed = true;
+                break;
+            }
+            byte alpha = (byte)Mathf.Max(0, pixels[index].a - alphaStep);
+            if (alpha == 0) erasedCount++;
+            pixels[index].a = alpha;
             changed = true;
         }
-        if (!changed) return;
+        if (!hit) return;
+        if (fullClean)
+        {
+            BeginFullCleanFade();
+            return;
+        }
         runtimeTexture.SetPixels32(pixels);
         runtimeTexture.Apply(false);
         if ((float)erasedCount / originalCount < cleanThreshold) return;
+        Complete();
+    }
+
+    // 高级海绵的「一擦全净」：从当前状态起整盘淡出，走完再结算。
+    private void BeginFullCleanFade()
+    {
+        fading = true;
+        fadeTimer = 0f;
+        fadeFrom = (Color32[])pixels.Clone();
+    }
+
+    private void Update()
+    {
+        if (!fading) return;
+        fadeTimer += Time.unscaledDeltaTime;
+        float k = Mathf.Clamp01(fadeTimer / fullCleanFadeTime);
+        float keep = 1f - k;
+        for (int i = 0; i < pixels.Length; i++)
+        {
+            pixels[i] = new Color32(fadeFrom[i].r, fadeFrom[i].g, fadeFrom[i].b,
+                (byte)(fadeFrom[i].a * keep));
+        }
+        runtimeTexture.SetPixels32(pixels);
+        runtimeTexture.Apply(false);
+        if (k >= 1f)
+        {
+            fading = false;
+            fadeFrom = null;
+            Complete();
+        }
+    }
+
+    private void Complete()
+    {
+        if (completed) return;
         completed = true;
         dirtRenderer.enabled = false;
         game.CompletePlate(this);

@@ -105,6 +105,7 @@ GameObject:
   - component: {fileID: 4586695651014672673}
   - component: {fileID: 5586783168800185613}
   - component: {fileID: 7767332232261718565}
+  - component: {fileID: 7287015472954685208}
   m_Layer: 0
   m_Name: DirtyPlate
   m_TagString: Untagged
@@ -202,6 +203,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DirtyPlate
   dirtRenderer: {fileID: 4369394736194017091}
   cleanThreshold: 0.85
+  fullCleanFadeTime: 0.25
 --- !u!114 &5586783168800185613
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -261,3 +263,23 @@ MonoBehaviour:
   clearanceScale: 1.1
   maxAttempts: 48
   jelly: {fileID: 5586783168800185613}
+--- !u!114 &7287015472954685208
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8877961831916804575}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6775aeca56f644b2ba12ad6e0124f600, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlateDragger
+  holdTime: 0.12
+  moveTolerance: 0.45
+  followLerp: 26
+  liftScale: 1.06
+  dragSortingBoost: 12
+  inputCamera: {fileID: 0}
+  jelly: {fileID: 5586783168800185613}
+  flyIn: {fileID: 7767332232261718565}

@@ -124,8 +124,6 @@ public class TicketDragger : MonoBehaviour
         if (!holding)
         {
             if (!justPressed || !InteractionEnabled) return;
-            // 机器没解锁时票不需要被搬走，干脆不抢占按下事件。
-            if (!game.ScratcherUnlocked) return;
             if (body == null || body.sprite == null) return;
             // 命中基准是静止尺寸的包围盒，入场动画的缩放不会撑大命中区。
             if (!HoverJelly.ContainsPointUnscaled(body.transform, body.sprite.bounds, world, baseScale)) return;

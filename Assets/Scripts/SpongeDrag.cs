@@ -18,6 +18,8 @@ public class SpongeDrag : MonoBehaviour
     [Tooltip("Table.png 中有颜色的桌面范围，单位为贴图像素（左下角为原点）。")]
     [SerializeField] private Rect tabletopPixels = new Rect(58f, 128f, 99f, 57f);
     [SerializeField, Min(1)] private int yellowBrushRadius = 4;
+    [Tooltip("每笔擦掉的污渍透明度（0-255）。255/3≈85 → 同一处约 3 笔擦净。高级海绵一擦全净，用不到这个值。")]
+    [SerializeField, Range(1, 255)] private int scrubAlphaStep = 85;
     [Tooltip("留空自动在本物体上找；找不到就没有惯性（松手即停）。")]
     [SerializeField] private DragInertia inertia;
 
@@ -130,7 +132,8 @@ public class SpongeDrag : MonoBehaviour
         {
             int brush = yellowBrushRadius * (advanced ? 2 : 1);
             int steps = Mathf.Clamp(Mathf.CeilToInt(Vector3.Distance(previousPosition, world) / 0.5f), 1, 50);
-            for (int i = 0; i <= steps; i++) plate.ScrubAt(Vector3.Lerp(previousPosition, world, (float)i / steps), brush);
+            for (int i = 0; i <= steps; i++)
+                plate.ScrubAt(Vector3.Lerp(previousPosition, world, (float)i / steps), brush, scrubAlphaStep, advanced);
         }
         previousPosition = world;
     }
