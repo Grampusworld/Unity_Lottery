@@ -327,7 +327,7 @@ MonoBehaviour:
   luckyProgressFill: {fileID: 1999330235}
   goldProgressFill: {fileID: 267172299}
   novaProgressFill: {fileID: 1490146382}
-  disappearDelay: 2
+  disappearDelay: 1.5
   platePrefab: {fileID: 4586695651014672673, guid: 35dbe93c98feb48e8bfe186f5144ae6c, type: 3}
   plateSpawnPoint: {fileID: 809485270}
   sponge: {fileID: 607013236}

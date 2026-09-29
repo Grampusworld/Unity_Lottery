@@ -3,19 +3,20 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 #endif
 
-// 把票拖进自动刮彩票机的手势。与「左键划过刮奖」共用一个鼠标键，靠**按住不动 0.22 秒**分流：
+// 把票拖进自动刮彩票机的手势。与「左键划过刮奖」共用一个鼠标键，靠**按住不动 0.12 秒**分流：
 //
-//   按住 → 指针几乎不动满 0.22s  →  拿起（票抬起、放大、可以拖）
+//   按住 → 指针几乎不动满 0.12s  →  拿起（票抬起、放大、可以拖）
 //   按住 → 一旦移动超过容差     →  判定为刮奖，本组件立刻放手，ScratchCard 照常工作
 //
-// 这样刮奖手感一点没变（划一下就出结果），只有「刻意按住」才会进拖拽。
+// 0.12s 是响应速度与误拿率的折中：再短的话，玩家刮到涂层边角或来回蹭时的无意识
+// 停顿就会被误判成「想拿起」，票突然抬起把刮奖输入抢走。
 // 松手时指针若在机器上就投料，否则飞回桌面落点。
 [RequireComponent(typeof(SpriteRenderer))]
 public class TicketDragger : MonoBehaviour
 {
     [Header("Hold to grab")]
     [Tooltip("按住多久才算「拿起」。")]
-    [SerializeField, Min(0.05f)] private float holdTime = 0.22f;
+    [SerializeField, Min(0.05f)] private float holdTime = 0.12f;
     [Tooltip("按住期间允许的最大位移（世界单位），超过就判定成刮奖。")]
     [SerializeField, Min(0.01f)] private float moveTolerance = 0.45f;
 
@@ -24,6 +25,10 @@ public class TicketDragger : MonoBehaviour
     [SerializeField, Min(1f)] private float followLerp = 26f;
     [Tooltip("拿起时的额外放大（纯视觉，命中区不变）。")]
     [SerializeField, Range(1f, 1.3f)] private float liftScale = 1.06f;
+    [Tooltip("拖到机器可收范围上时的提示缩小（相对桌面基准）。判定与 TryFeedTicket 同源，缩了就一定收得下。")]
+    [SerializeField, Range(0.4f, 1f)] private float dropHintScale = 0.75f;
+    [Tooltip("提示缩放的跟随速度，越大过渡越快。")]
+    [SerializeField, Min(1f)] private float hintLerp = 14f;
     [Tooltip("拖拽期间提升的渲染层数，保证票盖在机器上面。")]
     [SerializeField, Min(0)] private int dragSortingBoost = 12;
     [SerializeField, Min(0.05f)] private float returnTime = 0.26f;
@@ -50,6 +55,7 @@ public class TicketDragger : MonoBehaviour
     private bool grabbed;
     private bool returning;
     private Vector3 returnFrom;
+    private Vector3 returnFromScale;
     private int bodyOrder, coverOrder;
 
     private void Awake()
@@ -66,7 +72,7 @@ public class TicketDragger : MonoBehaviour
         RegisterBody();
     }
 
-    // 登记成「票」。机器在按下那一帧必须给票让路 —— 机器按下即拖，而票要按住 0.22s
+    // 登记成「票」。机器在按下那一帧必须给票让路 —— 机器按下即拖，而票要按住 0.12s
     // 才拿得起来，不让路的话票一旦被压在机器上就永远抓不回来（软锁）。
     // 这里只登记、**不参与碰撞**：票不与任何东西互斥（投喂判定用的是光标位置，不受阻挡影响）。
     private void RegisterBody()
@@ -160,6 +166,14 @@ public class TicketDragger : MonoBehaviour
         Vector3 target = new Vector3(world.x, world.y, home.z);
         float k = 1f - Mathf.Exp(-followLerp * Time.unscaledDeltaTime);
         transform.position = Vector3.Lerp(transform.position, target, k);
+
+        // 投放提示：指针在机器的可收范围上 → 票平滑缩到 dropHintScale 示意「可以松手」；
+        // 离开 → 回到抬起尺寸。判定与 TryFeedTicket 完全同源（同 margin、同容量/解锁检查），
+        // 所以「缩着」就等于「松手必收」。缩放写者仍归本组件独占（果冻在 Grab 时已挂起）。
+        bool hint = game.CanFeedAt(world);
+        float f = 1f - Mathf.Exp(-hintLerp * Time.unscaledDeltaTime);
+        Vector3 goal = baseScale * (hint ? dropHintScale : liftScale);
+        transform.localScale = Vector3.Lerp(transform.localScale, goal, f);
     }
 
     private void Drop(Vector3 world)
@@ -190,6 +204,7 @@ public class TicketDragger : MonoBehaviour
         returning = true;
         returnTimer = 0f;
         returnFrom = transform.position;
+        returnFromScale = transform.localScale;   // 可能还带着 0.75 的投放提示缩放，飞回途中平滑长回去
     }
 
     private void StepReturn()
@@ -198,10 +213,12 @@ public class TicketDragger : MonoBehaviour
         float k = Mathf.Clamp01(returnTimer / returnTime);
         float ease = 1f - Mathf.Pow(1f - k, 3f);
         transform.position = Vector3.Lerp(returnFrom, home, ease);
+        transform.localScale = Vector3.Lerp(returnFromScale, baseScale, ease);
         if (k >= 1f)
         {
             returning = false;
             transform.position = home;
+            transform.localScale = baseScale;
         }
     }
 

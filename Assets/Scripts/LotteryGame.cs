@@ -21,7 +21,7 @@ public class LotteryGame : MonoBehaviour
     [SerializeField] private Image luckyProgressFill;
     [SerializeField] private Image goldProgressFill;
     [SerializeField] private Image novaProgressFill;
-    [SerializeField, Min(0)] private float disappearDelay = 2f;
+    [SerializeField, Min(0)] private float disappearDelay = 1.5f;
 
     [Header("Dishes")]
     [SerializeField] private DirtyPlate platePrefab;
@@ -168,14 +168,25 @@ public class LotteryGame : MonoBehaviour
         Commit();
     }
 
+    // 投放提示与投料共用同一套判定（同 margin、同容量/解锁检查）：
+    // 「票缩小了」就等于「松手必收下」，玩家只需学一条规则。
+    public bool CanFeedAt(Vector3 worldPoint)
+    {
+        if (scratcher == null || !scratcherUnlocked) return false;
+        if (!scratcher.CanAcceptTicket) return false;
+        return scratcher.ContainsPoint(worldPoint, 0.25f);
+    }
+
     // 手动刮开的结算。「已结算」标记统一在这里置位（机器那条路走 LotteryTicket.MarkSettled）。
     public void CompleteTicket(LotteryTicket ticket)
     {
         if (ticket == null || ticket.Settled) return;
         ticket.MarkSettled();
         PayTicket(ticket.Kind, ticket.Prize, ticket.transform);
-        // 桌子上的那张仍然交给 RemoveTicket 收尾：它要等 2 秒淡出，
-        // 而且 currentTicket 必须留到那时才清空，否则玩家在这 2 秒里再买一张会被它抢先置空。
+        // 刮完烟花：双层金白烟火，寿命比停留时间短一截，先于票消失结束。
+        TicketFirework.Play(ticket.transform.position);
+        // 桌子上的那张仍然交给 RemoveTicket 收尾：它要按 disappearDelay 淡出，
+        // 而且 currentTicket 必须留到那时才清空，否则玩家在这几秒里再买一张会被它抢先置空。
         if (ticket == currentTicket) StartCoroutine(RemoveTicket(ticket));
         else RefreshUI();
     }
@@ -183,8 +194,7 @@ public class LotteryGame : MonoBehaviour
     // 把票拖进自动刮彩票机时调用：机器收下就把它从桌面摘掉，玩家可以立刻再买一张。
     public bool TryFeedTicket(LotteryTicket ticket, Vector3 worldPoint)
     {
-        if (scratcher == null || ticket == null || !scratcherUnlocked) return false;
-        if (!scratcher.ContainsPoint(worldPoint, 0.25f)) return false;
+        if (!CanFeedAt(worldPoint)) return false;
         if (!scratcher.TryAccept(ticket)) return false;
         if (ticket == currentTicket)
         {

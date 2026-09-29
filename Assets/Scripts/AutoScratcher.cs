@@ -10,7 +10,7 @@ using UnityEngine;
 //
 // 与洗盘机的差别：
 //   ① 洗盘机每周期产出一笔固定钱；这台机器每张票**独立计时**、独立结算，
-//      金额取该票抽中的 prize，所以容量 > 1 时能看到多张票在不同进度上同时跑。
+//      金额取该票抽中的 prize，串行计时（队头完成才轮到下一张起算），容量只是队列长度。
 //   ② 机身有三个等级（三段素材），等级由 speedLevel + capacityLevel 推导，
 //      换图时机身**脚底不动、向上长**（每张素材的 pivot 都落在内容底边中心）。
 //
@@ -98,6 +98,11 @@ public class AutoScratcher : MonoBehaviour
     public int Count => slots.Count;
     public int TierIndex => Mathf.Max(0, tierIndex);
     public int Capacity => capacity;
+
+    // 现在还能不能再收一张（解锁 + 没满仓）。投放提示（TicketDragger 的缩小反馈）
+    // 与 TryAccept 用同一个属性判定，保证「提示缩了」就等于「松手必收」。
+    public bool CanAcceptTicket => unlocked && ticketContainer != null && slots.Count < capacity;
+
     public string TierName =>
         (tiers != null && tierIndex >= 0 && tierIndex < tiers.Length) ? tiers[tierIndex].displayName : "";
 
@@ -426,6 +431,15 @@ public class AutoScratcher : MonoBehaviour
         }
         if (effect != null) effect.SetRunning(true);
 
+        // 串行计时：永远只有**队头**（最早进机、且已入槽完成）那张在计时 —— 它完成并
+        // 结算（转入出槽动画）后，下一张才从 0 开始起算。等待中的票静止排队：不计时、
+        // 不抖动，进度环也只反映队头进度。容量因此是「队列长度」，不是并行道数。
+        int activeIndex = -1;
+        for (int i = 0; i < slots.Count; i++)
+        {
+            if (slots[i].phase == 1) { activeIndex = i; break; }
+        }
+
         float best = 0f;
         for (int i = slots.Count - 1; i >= 0; i--)
         {
@@ -455,9 +469,10 @@ public class AutoScratcher : MonoBehaviour
 
             if (slot.phase == 1)
             {
+                if (i != activeIndex) continue;   // 排队中：静止，等队头完成再起算
                 slot.elapsed += Time.deltaTime;
                 float p = Mathf.Clamp01(slot.elapsed / secondsPerTicket);
-                best = Mathf.Max(best, p);
+                best = p;
                 // 处理中的迷你票轻微抖动，配合刮擦头的节奏。
                 float wobble = Mathf.Sin(slot.elapsed * 11f + slot.targetPos.x) * 0.05f;
                 slot.node.localScale = slot.targetScale * (1f + wobble);

@@ -148,10 +148,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a858bf85520ab4e718c1afe69801d643, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TicketDragger
-  holdTime: 0.22
+  holdTime: 0.12
   moveTolerance: 0.45
   followLerp: 26
   liftScale: 1.06
+  dropHintScale: 0.75
+  hintLerp: 14
   dragSortingBoost: 12
   returnTime: 0.26
   inputCamera: {fileID: 0}
