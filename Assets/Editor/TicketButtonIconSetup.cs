@@ -4,10 +4,10 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.UI;
 
-// 给三个出票按钮的左侧加对应彩票素材图标，并让「图标 + 文字」整组居中。
+// 给出票按钮的左侧加对应彩票素材图标，并让「图标 + 文字」整组居中。
 // 菜单：Tools/挂个爽/给票按钮加图标
 //
-// 布局（三个按钮共用同一套数字，改一处即可整体生效）：
+// 布局（所有按钮共用同一套数字，改一处即可整体生效）：
 //   Label 保持**全宽拉伸 + 左右各内缩 0**，Center 对齐。文字不靠挪 rect 定位，
 //   而是由 TicketButtonIconLayout 写 TMP 的 margin 把文本块整体右移 30px
 //   （= (iconWidth 48 + gap 12) / 2），这样文字中心恒为「按钮中心 + 30」。
@@ -28,19 +28,20 @@ public static class TicketButtonIconSetup
     private const string MenuRoot = "Tools/挂个爽/";
     private const string IconName = "Icon";
 
-    private static readonly string[] ButtonNames = { "LuckyTicketButton", "GoldTicketButton", "NovaTicketButton" };
+    private static readonly string[] ButtonNames = { "LuckyTicketButton", "GoldTicketButton", "NovaTicketButton", "HeartMatchTicketButton", "CrossCodeTicketButton", "ZigzagRunTicketButton" };
+    private static readonly string[] BasePaths = {
+        "Assets/Lotteries/LuckyTicket/LuckyTicket_Base.png",
+        "Assets/Lotteries/GoldTicket/GoldTicket_Base.png",
+        "Assets/Lotteries/NovaTicket/NovaTicket_Base.png",
+        "Assets/Lotteries/HeartMatchTicket/HeartMatch_Base.png",
+        "Assets/Lotteries/CrossCodeTicket/CrossCode_Base.png",
+        "Assets/Lotteries/ZigzagRunTicket/ZigzagRun_Base.png" };
 
     private const float IconWidth = 48f;
     private const float IconHeight = 30f;
     private const float IconGap = 12f;        // 图标右边缘 → 文字左边缘
     private const float IconRowY = 43f;       // 与 Label 主标题行同高
     private const float SideMargin = 6f;      // 整组距按钮左右的最小留白
-
-    // 回读校验用的真实运行时文案（取自 LotteryGame.TicketLabel）：
-    //   unlocked ? "NEW <NAME>  $<price>" : "UNLOCK <NAME>  $(kind==1 ? 100 : 1000)"
-    private static readonly string[] LuckySamples = { "NEW LUCKY  $10" };
-    private static readonly string[] GoldSamples = { "NEW GOLD  $50", "UNLOCK GOLD  $100" };
-    private static readonly string[] NovaSamples = { "NEW NOVA  $50", "UNLOCK NOVA  $1000" };
 
     [MenuItem(MenuRoot + "给票按钮加图标", false, 12)]
     public static void Run()
@@ -57,8 +58,7 @@ public static class TicketButtonIconSetup
                 continue;
             }
 
-            string kind = ButtonNames[i].Replace("TicketButton", "Ticket");
-            string path = "Assets/Lotteries/" + kind + "/" + kind + "_Base.png";
+            string path = BasePaths[i];
             Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
             if (sprite == null)
             {
@@ -141,7 +141,7 @@ public static class TicketButtonIconSetup
         // 先量再存：SaveScene 必须在 Verify() 之后。
         // 否则存盘时上面那些 Apply() 可能因画布布局还没刷新（rect.width=0）全部早退，
         // 落盘的 icon 位置是初值，和组件自己算出来的对不上（踩过）。
-        Debug.Log($"[TicketIcon] 完成 {done}/3 个按钮 | {report}| {Verify()}");
+        Debug.Log($"[TicketIcon] 完成 {done}/{ButtonNames.Length} 个按钮 | {report}| {Verify()}");
 
         EditorSceneManager.SaveScene(scene);
     }
@@ -173,7 +173,10 @@ public static class TicketButtonIconSetup
             GameObject button = FindByName(ButtonNames[i]);
             if (button == null) continue;
 
-            string[] samples = i == 0 ? LuckySamples : i == 1 ? GoldSamples : NovaSamples;
+            string[] samples = i == 0
+                ? new[] { "NEW " + LotteryEconomy.TicketNames[i] + "  $" + LotteryEconomy.TicketPrices[i] }
+                : new[] { "NEW " + LotteryEconomy.TicketNames[i] + "  $" + LotteryEconomy.TicketPrices[i],
+                          "UNLOCK " + LotteryEconomy.TicketNames[i] + "  $" + LotteryEconomy.UnlockPrices[i] };
             for (int s = 0; s < samples.Length; s++)
             {
                 if (s > 0) sb.Append("  ");

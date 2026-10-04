@@ -96,7 +96,7 @@ public class CoinGainFeedback : MonoBehaviour
 
     private RectTransform CreatePopup(int amount, out Image coin, out CanvasGroup group)
     {
-        GameObject root = new GameObject("Coin Gain +$" + amount, typeof(RectTransform), typeof(CanvasGroup));
+        GameObject root = new GameObject("Coin Gain " + MoneyFormat.Money(amount), typeof(RectTransform), typeof(CanvasGroup));
         root.transform.SetParent(canvasRect, false);
         root.transform.SetAsLastSibling();
         RectTransform rect = (RectTransform)root.transform;
@@ -133,7 +133,7 @@ public class CoinGainFeedback : MonoBehaviour
         label.alignment = TextAlignmentOptions.MidlineLeft;
         label.overflowMode = TextOverflowModes.Overflow;
         label.raycastTarget = false;
-        label.text = "+$" + amount;
+        label.text = "+" + MoneyFormat.Money(amount);
         return rect;
     }
 
@@ -217,7 +217,8 @@ public class CoinGainFeedback : MonoBehaviour
 
     private void RenderBalance()
     {
-        if (balanceText != null) balanceText.text = "MONEY  $" + Mathf.RoundToInt(displayedBalance);
+        // 走 MoneyFormat：通关目标抬到 7 位数之后，"$1000000" 会直接撑出余额框。
+        if (balanceText != null) balanceText.text = "MONEY  " + MoneyFormat.Money((long)Mathf.RoundToInt(displayedBalance));
     }
 
     private void OnDisable()

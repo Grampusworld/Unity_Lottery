@@ -103,9 +103,19 @@ public class AutoScratcher : MonoBehaviour
     public string TierName =>
         (tiers != null && tierIndex >= 0 && tierIndex < tiers.Length) ? tiers[tierIndex].displayName : "";
 
+    // 当前档位的机身贴图。商店里 SCRATCHER 解锁行的图标按档位换机身用（V3/V1/V2）。
+    // 对外只给这一个入口，别让别处直接摸 tiers —— tierIndex 的夹取只有这里和 SetTier 知道。
+    public Sprite TierSprite(int tier)
+    {
+        if (tiers == null) return null;
+        int clamped = Mathf.Clamp(tier, 0, tiers.Length - 1);
+        return tiers[clamped] != null ? tiers[clamped].sprite : null;
+    }
+
     // 正在播入场下落（还没落地）。计数牌要在这段时间藏起来：锚点跟着 transform 走，
     // 而 transform 还在半空，字会从屏幕上方一路飘下来。
     public bool Entering => entryTimer >= 0f;
+    public WasherProgressRing ProgressRing => ring;
 
     // 机身**可见内容**的底边中点（世界坐标），用来把计数牌摆到机器下方。
     // 不能直接用 transform.position：三张素材的 pivot 现在恰好都落在内容底边上，
@@ -407,6 +417,7 @@ public class AutoScratcher : MonoBehaviour
 
     private void Update()
     {
+        if (MainMenuScreen.GameplayBlocked) return;
         if (entryTimer >= 0f)
         {
             entryTimer += Time.deltaTime;

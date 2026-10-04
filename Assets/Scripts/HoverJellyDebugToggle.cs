@@ -15,7 +15,11 @@ public class HoverJellyDebugToggle : MonoBehaviour
 
     private void OnDisable() => HoverJellySettings.Changed -= Refresh;
 
-    public void Toggle() => HoverJellySettings.Toggle();
+    public void Toggle()
+    {
+        HoverJellySettings.Toggle();
+        LotterySfx.Play(LotterySfx.Sound.SettingToggle);
+    }
 
     private void Refresh()
     {

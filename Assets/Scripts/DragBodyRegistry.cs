@@ -4,7 +4,7 @@ using UnityEngine;
 // 可拖/可挡物体的实体占位登记处。只做三件事：
 //   ① 谁跟谁能撞（Collides）
 //   ② 把「想去的位置」按最小穿透轴推回合法区（Resolve）
-//   ③ 这次按下该让给谁（Hit）
+//   ③ 这次按下归谁（Claimant）
 //
 // 为什么需要全局登记处，而不是各拖拽组件互相持有引用：
 //   盘子和票都是运行时 Instantiate 的，编辑器里根本没有连线对象；
@@ -20,11 +20,21 @@ using UnityEngine;
 //                      不是票的位置），票被挡住也照样能投喂；而且票比机器还宽，
 //                      撞起来会被弹得很怪
 //
-// 让路规则（抓取仲裁，见 Hit 的调用方）：
-//   机器必须把这次按下让给海绵和票。海绵是层次一致的（order 5 > 机器 4）；
-//   票画在机器**下面**（order 0~2 < 4），但必须让 —— 票要按住 0.12s 才拿得起来，
-//   机器在按下那一帧就抢走了，票一旦被压在机器上就永远抓不回来（软锁）。
-//   这是「可用性优先于层次一致」的一处刻意例外。
+// 让路规则（抓取仲裁，见 Claimant）：
+//   一次按下只能有一个赢家。优先级从高到低：**海绵 > 票 > 机器 > 盘子**。
+//   两条判据：
+//     ① **按下当帧抓的必须让给长按抓的**。海绵与机器是按下即拖，票与盘子要按住 0.12s。
+//        反过来的话，长按型在 0.12s 之后也会抓，两个物体一起跟着手跑
+//        （症状：点在票/盘子上按住不动，票/盘子自己溜走，或者两个一起被拖）。
+//     ② 同一档里按绘制层次排。海绵 order 5 > 机器 4 > 盘子 2/3。
+//   票压过机器是**刻意例外**：票画在机器下面（order 0~2 < 4），但票要按住才能拿起来，
+//   机器在按下那一帧就抢走了 —— 票一旦被压在机器上就永远抓不回来（软锁）。
+//   这是「可用性优先于层次一致」的一处妥协。
+//
+//   为什么规则集中写在一处、而不是各组件互相 Hit 一遍：
+//   原来是「长按型各自记得让自己让给谁」，四个文件里散着三条判断，必然漏
+//   （2026-09-29 实测：PlateDragger 漏了海绵、TicketDragger 一条都没有）。
+//   现在每个组件只问一句「这次按下是不是我的」，新增可拖物体不会再漏。
 public enum DragBodyKind
 {
     Machine,
@@ -87,9 +97,24 @@ public static class DragBodyRegistry
             if (ReferenceEquals(entries[i].owner, owner)) entries.RemoveAt(i);
     }
 
+    // 「我还在表里吗」。给每帧自检的组件用（SpongeDrag / MachineDrag）。
+    // 这张表是 static：Play 中任何一次脚本重编译（域重载）都会把它清空，而丢表**不会**
+    // 抛任何异常 —— 只是按下时 Claimant 不再返回这一类，物体直接变成「拖不动」。
+    // 2026-09-29 实测：海绵在表里消失后（11 条条目，0 条 Sponge），真实按下帧跑
+    // SpongeDrag.Update() 结果是 dragging=false，且没有任何报错 —— 正是这个原因
+    // 让「海绵压在盘子上拖不动」看起来像仲裁写反了。顺手扫掉死条目，与 Claimant 同语义。
+    public static bool IsRegistered(Component owner)
+    {
+        if (owner == null) return false;
+        PruneDead();
+        for (int i = 0; i < entries.Count; i++)
+            if (ReferenceEquals(entries[i].owner, owner)) return true;
+        return false;
+    }
+
     public static bool Collides(DragBodyKind a, DragBodyKind b)
     {
-        if (a == b) return true;                    // 同类互斥（两台机器、两台海绵……）
+        if (a == b) return a != DragBodyKind.Plate; // 盘子允许堆叠，其余同类互斥。
         bool machine = a == DragBodyKind.Machine || b == DragBodyKind.Machine;
         bool sponge = a == DragBodyKind.Sponge || b == DragBodyKind.Sponge;
         bool plate = a == DragBodyKind.Plate || b == DragBodyKind.Plate;
@@ -98,10 +123,51 @@ public static class DragBodyRegistry
         return false;
     }
 
-    // 这次按下的世界点是否落在某一类物体的包围盒里。给「让路」用。
-    public static bool Hit(Vector3 world, DragBodyKind kind)
+    // 这次按下的世界点**归谁**。没有命中任何可拖物体时返回 null。
+    // 每个拖拽组件都只问这一句：`Claimant(world) != 我这一类` 就整段早退。
+    // 优先级顺序只在本数组里定义一次（判据见文件顶部）。
+    private static readonly DragBodyKind[] GrabPriority =
+    {
+        DragBodyKind.Sponge,    // 层次最高（order 5）且按下即拖
+        DragBodyKind.Ticket,    // 长按型：必须压过按下即拖的机器，否则被机器压住就再也拿不起来
+        DragBodyKind.Machine,   // 按下即拖
+        DragBodyKind.Plate      // 长按型，层次也最低（order 2/3）
+    };
+
+    public static DragBodyKind? Claimant(Vector3 world)
     {
         PruneDead();
+        for (int p = 0; p < GrabPriority.Length; p++)
+            if (HitAny(world, GrabPriority[p])) return GrabPriority[p];
+        return null;
+    }
+
+    // 盘子允许堆叠，但一次按下只拿最上面一只；避免重叠的盘子全部跟着鼠标走。
+    public static bool OwnsPlatePress(DirtyPlate owner, Vector3 world)
+    {
+        PruneDead();
+        DirtyPlate top = null;
+        int order = int.MinValue;
+        for (int i = 0; i < entries.Count; i++)
+        {
+            Entry entry = entries[i];
+            if (entry.kind != DragBodyKind.Plate || entry.tr == null) continue;
+            DirtyPlate plate = entry.owner as DirtyPlate;
+            if (plate == null || !plate.Ready) continue;
+            PlateFlyIn fly = plate.GetComponent<PlateFlyIn>();
+            if (fly != null && fly.IsFlying) continue;
+            Vector3 center = entry.tr.position + entry.centerOffset;
+            if (Mathf.Abs(world.x - center.x) > entry.half.x || Mathf.Abs(world.y - center.y) > entry.half.y) continue;
+            if (plate.StackOrder < order) continue;
+            top = plate;
+            order = plate.StackOrder;
+        }
+        return ReferenceEquals(top, owner);
+    }
+
+    // 世界点是否落在某一类物体的包围盒里。
+    private static bool HitAny(Vector3 world, DragBodyKind kind)
+    {
         for (int i = 0; i < entries.Count; i++)
         {
             Entry entry = entries[i];
@@ -117,7 +183,8 @@ public static class DragBodyRegistry
     // 把 desired 推回合法区。origin 是「这次移动之前的位置」——
     // 推 ResolvePasses 轮还在重叠（被两台物体夹住）时整个作废、退回 origin，
     // 而不是把机身塞进一个非法位置。
-    public static Vector3 Resolve(Component self, Vector3 origin, Vector3 desired)
+    public static Vector3 Resolve(Component self, Vector3 origin, Vector3 desired,
+        System.Func<Vector3, Vector3> constrain = null)
     {
         PruneDead();
         if (self == null) return desired;
@@ -157,7 +224,28 @@ public static class DragBodyRegistry
 
                 // 最小穿透轴推回：斜着顶上去的结果就是「沿着对方侧边滑过去」，
                 // 和撞桌沿完全同一套手感，玩家不用区分撞到的是桌沿还是另一台机器。
-                if (overlapX < overlapY) result.x += overlapX * (dx >= 0f ? 1f : -1f);
+                if (constrain != null)
+                {
+                    // 桌沿堵住最短推离方向时，尝试另三面；不能为了避碰退到桌外。
+                    Vector3 best = result;
+                    float distance = float.PositiveInfinity;
+                    for (int side = 0; side < 4; side++)
+                    {
+                        Vector3 candidate = result;
+                        if (side < 2) candidate.x = otherCenter.x + (side == 0 ? -1f : 1f) * (half.x + other.half.x) - offset.x;
+                        else candidate.y = otherCenter.y + (side == 2 ? -1f : 1f) * (half.y + other.half.y) - offset.y;
+                        candidate = constrain(candidate);
+                        Vector3 separation = candidate + offset - otherCenter;
+                        if (Mathf.Abs(separation.x) < half.x + other.half.x - 1e-4f
+                            && Mathf.Abs(separation.y) < half.y + other.half.y - 1e-4f) continue;
+                        float travel = (candidate - result).sqrMagnitude;
+                        if (travel >= distance) continue;
+                        best = candidate;
+                        distance = travel;
+                    }
+                    result = best;
+                }
+                else if (overlapX < overlapY) result.x += overlapX * (dx >= 0f ? 1f : -1f);
                 else result.y += overlapY * (dy >= 0f ? 1f : -1f);
                 pushed = true;
             }

@@ -118,10 +118,10 @@ public static class LotterySceneSetup
         var goldBar = ProgressBar(goldButton.transform);
         var novaBar = ProgressBar(novaButton.transform);
 
-        var purpleButton = NewButton(gadgetsPanel, "PurpleSpongeButton", "PURPLE SPONGE  $30", 0, 0, 590, 190, Card, 25);
-        var washerButton = NewButton(gadgetsPanel, "WasherUnlockButton", "UNLOCK WASHER  $200", 0, 215, 590, 190, Card, 25);
-        var speedButton = NewButton(gadgetsPanel, "SpeedUpgradeButton", "SPEED +  $1", 0, 430, 590, 190, Card, 25);
-        var capacityButton = NewButton(gadgetsPanel, "CapacityUpgradeButton", "CAPACITY +  $1", 0, 645, 590, 190, Card, 25);
+        var purpleButton = NewButton(gadgetsPanel, "PurpleSpongeButton", "PURPLE SPONGE  $" + LotteryEconomy.PurpleSpongeCost, 0, 0, 590, 190, Card, 25);
+        var washerButton = NewButton(gadgetsPanel, "WasherUnlockButton", "UNLOCK WASHER  $" + LotteryEconomy.WasherUnlockCost, 0, 215, 590, 190, Card, 25);
+        var speedButton = NewButton(gadgetsPanel, "SpeedUpgradeButton", "SPEED +  $" + LotteryEconomy.WasherSpeedCosts[0], 0, 430, 590, 190, Card, 25);
+        var capacityButton = NewButton(gadgetsPanel, "CapacityUpgradeButton", "CAPACITY +  $" + LotteryEconomy.WasherCapacityCosts[0], 0, 645, 590, 190, Card, 25);
         UnityEventTools.AddPersistentListener(purpleButton.onClick, game.BuyPurpleSponge);
         UnityEventTools.AddPersistentListener(washerButton.onClick, game.BuyWasher);
         UnityEventTools.AddPersistentListener(speedButton.onClick, game.UpgradeSpeed);

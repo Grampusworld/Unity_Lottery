@@ -1,0 +1,58 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &7626523543004833321
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7546869726630720903}
+  - component: {fileID: 6532162484212566008}
+  m_Layer: 0
+  m_Name: LotterySfx
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7546869726630720903
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7626523543004833321}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6532162484212566008
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7626523543004833321}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: edd574a75cf09438088fbc178b63a1b2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LotterySfx
+  menuHover: {fileID: 8300000, guid: 5ff1e4c0f958d4f99bba6b703075dacc, type: 3}
+  select: {fileID: 8300000, guid: ff0e1c7ade94b4fbb8d708ba380db0ed, type: 3}
+  coinGain: {fileID: 8300000, guid: 0a144883f2f8e4179a74d13dddb564d5, type: 3}
+  dragStart: {fileID: 8300000, guid: 447c813da66f840f7884161b20aa9b83, type: 3}
+  insufficientFunds: {fileID: 8300000, guid: 5eda1ef30180c49249baaa2f863a5d3e, type: 3}
+  scratch: {fileID: 8300000, guid: 497d284d6881f4a2badff2bd16db3b4c, type: 3}
+  drop: {fileID: 8300000, guid: 638e5993271054e62af766c315347377, type: 3}
+  settingToggle: {fileID: 8300000, guid: 4d38fa00846cf436d83d3e5a14092633, type: 3}
+  shopTab: {fileID: 8300000, guid: 86231d001d73042dbbb864728f69d7c3, type: 3}
+  back: {fileID: 8300000, guid: c03b4f91573234045b4f7c5b9582ee14, type: 3}
+  manualFeed: {fileID: 8300000, guid: 37f69ec8c648e451aa6f7d576a8cb2be, type: 3}
+  volume: 0.6

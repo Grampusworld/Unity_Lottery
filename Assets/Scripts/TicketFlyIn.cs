@@ -12,7 +12,7 @@ using UnityEngine;
 public class TicketFlyIn : MonoBehaviour
 {
     [Header("Flight")]
-    [SerializeField, Min(0.05f)] private float flightTime = 0.52f;
+    [SerializeField, Min(0.05f)] private float flightTime = 0.25f;
     [Tooltip("出生点在屏幕右边界之外多少（视口宽度比例，0.12 = 边界外 12%）。")]
     [SerializeField, Range(0.02f, 0.6f)] private float spawnViewportMargin = 0.12f;
     [Tooltip("飞行途中的上抛弧度（世界单位）。")]
@@ -26,7 +26,7 @@ public class TicketFlyIn : MonoBehaviour
     [SerializeField, Range(0f, 1f)] private float squashRatio = 0.65f;
 
     [Header("Landing")]
-    [SerializeField, Min(0.05f)] private float settleTime = 0.5f;
+    [SerializeField, Min(0.05f)] private float settleTime = 0.15f;
     [Tooltip("落地挤压的幅度。")]
     [SerializeField, Range(0f, 0.4f)] private float landingSquash = 0.15f;
     [Tooltip("落地后回弹的小跳高度（世界单位）。")]

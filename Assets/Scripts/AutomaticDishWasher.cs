@@ -40,6 +40,7 @@ public class AutomaticDishWasher : MonoBehaviour
     private int platesPerCycle = 5;
     private bool unlocked;
     private State state = State.Locked;
+    public WasherProgressRing ProgressRing => ring;
 
     private void Awake()
     {
@@ -162,6 +163,7 @@ public class AutomaticDishWasher : MonoBehaviour
 
     private void Update()
     {
+        if (MainMenuScreen.GameplayBlocked) return;
         if (!unlocked || game == null || state != State.Washing) return;
 
         elapsed += Time.deltaTime;
@@ -170,8 +172,10 @@ public class AutomaticDishWasher : MonoBehaviour
 
         elapsed -= secondsPerCycle;
         game.AwardWashedPlates(platesPerCycle);
-        // 洗完即清空，下一轮重新装：与「每周期都快放入场」自洽。
-        if (feeder != null) feeder.ClearPlates();
+        // 洗完即换批，下一轮重新装：与「每周期都快放入场」自洽。
+        // 走 ShrinkOutPlates 而不是 ClearPlates —— 让这一批缩小着退场，而不是一帧消失。
+        // 新一批随即飞入，两者重叠 0.3s（2026-09-29 定）。
+        if (feeder != null) feeder.ShrinkOutPlates();
         StartFeed(true);
     }
 }

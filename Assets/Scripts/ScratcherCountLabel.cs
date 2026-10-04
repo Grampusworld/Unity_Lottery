@@ -96,6 +96,16 @@ public class ScratcherCountLabel : MonoBehaviour
         labelRect.anchoredPosition = local;
     }
 
+    public Bounds GetWorldBounds()
+    {
+        Vector3 center = scratcher != null ? scratcher.ContentBottomWorld - Vector3.up * belowOffset : transform.position;
+        if (labelRect == null || worldCamera == null) return new Bounds(center, Vector3.zero);
+        float factor = labelCanvas != null ? labelCanvas.rootCanvas.scaleFactor : 1f;
+        float unitsPerPixel = 2f * worldCamera.orthographicSize / Mathf.Max(1f, worldCamera.pixelHeight);
+        Vector2 size = labelRect.rect.size * factor * unitsPerPixel;
+        return new Bounds(center, new Vector3(size.x, size.y, 0f));
+    }
+
     private void ApplyVisible(bool visible)
     {
         if (shownVisible == visible) return;

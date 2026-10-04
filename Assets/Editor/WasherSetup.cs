@@ -22,15 +22,18 @@ public static class WasherSetup
     // 26 = 场景的实际值（20 → 24 → 26，26 是「再大会顶到屏幕右边界」前最后一档）。
     // 曾经写 24 而场景是 26：菜单一跑就把机身缩回去，环/槽位/水流/碰撞会连带全错 —— 菜单必须与场景一致才能保持幂等。
     private const float WasherScale = 26f;
-    private const int RingTextureSize = 128;
-    private const float RingOuter = 62f;
-    private const float RingInner = 54f;        // 8px 环带：12px 太厚，会糊住机身控制面板
-    // 进度环：直径 = 洗盘机可见宽（29.64）× 0.36 ≈ 10.67 世界单位，环底边离机身内容顶边 1.0。
-    // 两台机器共用这一套参数（都归 WasherProgressRing 算）。用**宽度**而不是高度：
-    // 两台机器高度接近，按高度算两个环几乎一样大（8.24 vs 7.11），按宽度算才拉得开（10.67 vs 6.02）。
-    // 旧值 1.45 是「直径 = 身高 × 1.45」（包住机身），那个环比机身还大一圈。
-    private const float RingSizeRatio = 0.36f;
-    private const float RingBottomGap = 1f;
+    // 环贴图与环带。2026-09-29 后半程整体减半：128→64 / 外径 62→31 / 内径 54→27，
+    // 环带仍是 4 texel。等比缩小是必须连贴图一起做的 —— 128 texel 铺到减半后的直径上，
+    // 1 个环 texel 只剩 0.6 屏幕像素，Point 采样下环带边缘会跳 1px、看起来全是毛边。
+    private const int RingTextureSize = 64;
+    private const float RingOuter = 31f;
+    private const float RingInner = 27f;        // 4 texel 环带（原 8 texel 的一半）
+    // 进度环：直径 = 洗盘机可见宽（29.64）× 0.18 ≈ 5.34 世界单位（= 76.8 屏幕像素），
+    // 环底边离机身内容顶边 0.5。两台机器共用这一套参数（都归 WasherProgressRing 算）。
+    // 用**宽度**而不是高度：两台机器高度接近，按高度算两个环几乎一样大，按宽度算才拉得开
+    // （洗盘机 5.34 vs 刮票机 3.01）。旧值是 0.36 / gap 1.0，整体是现在的一倍。
+    private const float RingSizeRatio = 0.18f;
+    private const float RingBottomGap = 0.5f;
     private const int RingFillSteps = 0;        // 0 = 不量化（逐帧连续填）
 
     // 玻璃窗：机身 sprite 局部 x 12..101 / y 28..61，即 90×34 texel，中心只偏半个 texel。

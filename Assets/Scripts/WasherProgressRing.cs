@@ -31,10 +31,11 @@ public class WasherProgressRing : MonoBehaviour
     [Header("Placement")]
     [Tooltip("环直径 = 机器可见内容宽度 × 该系数。\n" +
              "用宽度而不是高度：两台机器高度接近（22.9 / 19.8~23.2），按高度算两个环几乎一样大；" +
-             "按宽度算才能让洗盘机的环明显更大（10.67 vs 6.02~7.11 世界单位）。")]
-    [SerializeField] private float sizeRatio = 0.36f;
+             "按宽度算才能让洗盘机的环明显更大（5.34 vs 3.01~3.56 世界单位）。\n" +
+             "0.18 是 2026-09-29 从 0.36 减半来的（贴图同步 128→64，环带仍是 4 texel）。")]
+    [SerializeField] private float sizeRatio = 0.18f;
     [Tooltip("环**底边**与机器可见内容顶边之间的间隙（世界单位）。用固定值：尺寸不同的两个环有同样的悬浮高度。")]
-    [SerializeField] private float bottomGap = 1f;
+    [SerializeField] private float bottomGap = 0.5f;
 
     [Header("Fade")]
     [SerializeField] private float fadeInDuration = 0.15f;
@@ -63,6 +64,14 @@ public class WasherProgressRing : MonoBehaviour
 
     // ---- 对外接口 ----------------------------------------------------------
 
+    public Bounds GetWorldBounds(Vector3 contentCenter, Vector2 contentSize)
+    {
+        float diameter = Mathf.Max(0.01f, contentSize.x) * sizeRatio;
+        return new Bounds(new Vector3(contentCenter.x,
+            contentCenter.y + contentSize.y * 0.5f + bottomGap + diameter * 0.5f, 0f),
+            new Vector3(diameter, diameter, 0f));
+    }
+
     // 机器把自己的**可见内容包围盒**（世界空间）推过来：初始化 / 换等级 / 改尺寸时各调一次。
     // 传 SpriteRenderer 而不是裸 Transform，是为了拿到「机器是谁」用于每帧跟随。
     // contentCenter / contentSize 必须是**静止尺寸**下的值（不要用果冻放大后的包围盒），
@@ -80,7 +89,7 @@ public class WasherProgressRing : MonoBehaviour
         // z 保持环自己原来的值：它是世界空间 Canvas 的所在平面，不该跟着机器走。
         transform.position = new Vector3(contentCenter.x, centerY, transform.position.z);
 
-        // 世界直径 → Canvas 缩放：Image 的矩形宽度就是环贴图的像素宽（两台机器都是 128）。
+        // 世界直径 → Canvas 缩放：Image 的矩形宽度就是环贴图的像素宽（两台机器共用同一张，现在 64）。
         float rectWidth = ringImage != null ? ringImage.rectTransform.rect.width : 100f;
         float scale = diameter / Mathf.Max(1f, rectWidth);
         transform.localScale = new Vector3(scale, scale, 1f);

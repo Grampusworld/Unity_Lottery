@@ -6,7 +6,7 @@ using UnityEngine;
 // 设计约束（2026-09-29 定稿）：
 //   · 只在**手动**刮开时触发（LotteryGame.CompleteTicket）；机器结算已有爆点 + 机身脉冲，
 //     再叠烟花会遮机身和计数牌，多票连结时也太闹。
-//   · 总寿命 ~1.05s，比票的停留时间（disappearDelay = 1.5s）短一截 —— 特效先散完，
+//   · 总寿命约 0.32s，比票的停留时间（disappearDelay = 0.35s）短一截 —— 特效先散完，
 //     票再消失，不会出现「烟花跟着票一起蒸发」的突兀感。
 //   · 降级档（Reduce Motion）直接不炸：烟花是纯装饰，静默跳过比放慢更符合该档的意图。
 public class TicketFirework : MonoBehaviour
@@ -107,7 +107,7 @@ public class TicketFirework : MonoBehaviour
 
     private void Update()
     {
-        float dt = Time.deltaTime;
+        float dt = Time.deltaTime * (1.05f / 0.32f);
         if (dt <= 0f) return;
         age += dt;
 

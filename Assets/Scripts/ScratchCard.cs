@@ -35,10 +35,29 @@ public class ScratchCard : MonoBehaviour
     private Texture2D runtimeTexture;
     private Color32[] pixels;
     private int width, height, originalCount, erasedCount;
+    // 不透明区的像素包围盒（含端点）。刮奖判定与「拖动把手」判定共用这一个框。
+    private int opaqueMinX, opaqueMinY, opaqueMaxX, opaqueMaxY;
+    private bool hasCover;
     private Vector2? previousPixel;
     private bool revealed;
+    private bool strokeSoundPlayed;
 
     public float Progress => originalCount == 0 ? 0f : (float)erasedCount / originalCount;
+
+    // 这个世界的点在不在**涂层实体**上。给 TicketDragger 用：票面中间那块是刮奖区，
+    // 它外面那一圈（票的边框）是拖动把手 —— 两者同一个来源，不会各自算一套对不上。
+    // 涂层已刮完 / 输入被关（入场、被机器接管）时一律返回 false，等于「整张票都能拖」。
+    public bool CoversPoint(Vector3 world)
+    {
+        if (!inputEnabled || revealed || !hasCover) return false;
+        if (runtimeSprite == null || cover == null) return false;
+        Vector3 local = transform.InverseTransformPoint(world);
+        if (cover.flipX) local.x = -local.x;
+        if (cover.flipY) local.y = -local.y;
+        Vector2 pixel = new Vector2(local.x, local.y) * runtimeSprite.pixelsPerUnit + runtimeSprite.pivot;
+        return pixel.x >= opaqueMinX && pixel.x <= opaqueMaxX + 1f
+            && pixel.y >= opaqueMinY && pixel.y <= opaqueMaxY + 1f;
+    }
 
     private void Start()
     {
@@ -70,8 +89,21 @@ public class ScratchCard : MonoBehaviour
             Mathf.RoundToInt(rect.x), Mathf.RoundToInt(rect.y), width, height));
         runtimeTexture.Apply(false);
         pixels = runtimeTexture.GetPixels32();
-        foreach (Color32 pixel in pixels)
-            if (pixel.a > 0) originalCount++;
+        // 顺带量出**不透明区**的包围盒：刮奖只可能发生在这里面，外面的透明边不可擦、
+        // 也不该计入 originalCount（计入的话 Progress 永远到不了 1，见 revealThreshold）。
+        // 票也正是拿这个框当「拖动把手」的外边界 —— 涂层比票面小得多（96×40 vs 118×72）。
+        opaqueMinX = width; opaqueMinY = height; opaqueMaxX = -1; opaqueMaxY = -1;
+        for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++)
+        {
+            if (pixels[y * width + x].a == 0) continue;
+            originalCount++;
+            if (x < opaqueMinX) opaqueMinX = x;
+            if (y < opaqueMinY) opaqueMinY = y;
+            if (x > opaqueMaxX) opaqueMaxX = x;
+            if (y > opaqueMaxY) opaqueMaxY = y;
+        }
+        hasCover = originalCount > 0;
 
         Vector2 pivot = new Vector2(originalSprite.pivot.x / width, originalSprite.pivot.y / height);
         runtimeSprite = Sprite.Create(runtimeTexture, new Rect(0, 0, width, height),
@@ -87,9 +119,12 @@ public class ScratchCard : MonoBehaviour
 
     private void Update()
     {
+        bool pressed = ReadMouse(out Vector2 screenPosition);
+        if (!pressed || MousePressedThisFrame()) strokeSoundPlayed = false;
+        if (MainMenuScreen.GameplayBlocked) { previousPixel = null; return; }
         if (revealed || !inputEnabled || runtimeTexture == null || !cover.enabled) return;
 
-        if (!ReadMouse(out Vector2 screenPosition) ||
+        if (!pressed ||
             !TryGetPixel(screenPosition, out Vector2 currentPixel))
         {
             previousPixel = null;
@@ -107,6 +142,11 @@ public class ScratchCard : MonoBehaviour
         previousPixel = currentPixel;
 
         if (!changed) return;
+        if (!strokeSoundPlayed)
+        {
+            strokeSoundPlayed = true;
+            LotterySfx.Play(LotterySfx.Sound.Scratch);
+        }
         runtimeTexture.SetPixels32(pixels);
         runtimeTexture.Apply(false);
 
@@ -129,6 +169,17 @@ public class ScratchCard : MonoBehaviour
 #elif ENABLE_LEGACY_INPUT_MANAGER
         position = Input.mousePosition;
         return Input.GetMouseButton(0);
+#else
+        return false;
+#endif
+    }
+
+    private static bool MousePressedThisFrame()
+    {
+#if ENABLE_INPUT_SYSTEM
+        return Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame;
+#elif ENABLE_LEGACY_INPUT_MANAGER
+        return Input.GetMouseButtonDown(0);
 #else
         return false;
 #endif
@@ -167,7 +218,11 @@ public class ScratchCard : MonoBehaviour
         return changed;
     }
 
-    private void OnDisable() => previousPixel = null;
+    private void OnDisable()
+    {
+        previousPixel = null;
+        strokeSoundPlayed = false;
+    }
 
     private void OnDestroy()
     {

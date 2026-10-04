@@ -6,10 +6,12 @@ using UnityEngine.Events;
 using UnityEngine.UI;
 
 // 一键装配自动刮彩票机：三段素材导入 + 机身 + 刮擦特效 + 进度环 + 迷你票容器 + 果冻，
-// 同时把 GadgetsPanel 从 4 行 × 190px 改成 7 行 × 108px，腾出机器需要的三个按钮。
+// 同时把 GadgetsPanel 改成「8 行 × 108px 的可滚动 viewport」，腾出机器需要的三个按钮
+// 与 MULTIPLE PLATES。
 // 菜单：Tools/挂个爽/一键装配自动刮彩票机
 //
 // 幂等：重复点只会把参数改回目标值，按名字复用已有物体，不会重复创建、不会重复挂 onClick。
+// 验收手段固定为：跑完之后 `diff Assets/Scenes/SampleScene.unity <跑之前的备份>` 必须是 0 差异。
 //
 // 全部用 SerializedObject / TextureImporterSettings 回写：项目里已经踩过三次
 // 「改 C# 默认值对场景已有实例无效」的坑（LotteryTicket.prizes、HoverJelly 参数、洗盘机调参）。
@@ -22,6 +24,7 @@ public static class ScratcherSetup
     private const string RingName = "ScratcherProgressRing";
     private const string RingSpritePath = "Assets/Materials/Automatic Dish Washer/WasherProgressRing.png";
     private const string PanelName = "GadgetsPanel";
+    private const string ContentName = "Content";
 
     private const float MachineScale = 38f;              // 与洗盘机同高（约 22.4 世界单位），像素格 0.38
     // 机身底边中点。2026-09-29 与海绵一起左移 2（机器间 gap 1.72 → 3.72）——
@@ -31,21 +34,47 @@ public static class ScratcherSetup
     private const int MiniSortingBoost = 6;              // 迷你票：机身 0→6 / 数字 1→7 / 涂层 2→8
     private const float EffectSortingOffset = 5f;        // 特效 → 9，盖在迷你票上面
     // 进度环直径 = 可见内容**宽度** × 该系数（不是高度）。两台机器高度接近（22.9 / 19.8~23.2），
-    // 按高度算两个环会几乎一样大；按宽度算才拉得开：洗盘机 29.64×0.36 ≈ 10.67，
-    // 刮票机 16.72×0.36 ≈ 6.02（T2 19.76×0.36 ≈ 7.11）。旧值 0.9 是「内容高 × 0.9」，直径 17.8~19.8。
-    private const float RingSizeRatio = 0.36f;
-    private const float RingBottomGap = 1f;      // 环底边与机身内容顶边的间隙（世界单位）
+    // 按高度算两个环会几乎一样大；按宽度算才拉得开：洗盘机 29.64×0.18 ≈ 5.34，
+    // 刮票机 16.72×0.18 ≈ 3.01（T2 19.76×0.18 ≈ 3.56）。
+    // 2026-09-29 后半程：0.36 → 0.18（直径减半），贴图同步 128 → 64，环带仍 4 texel。
+    private const float RingSizeRatio = 0.18f;
+    private const float RingBottomGap = 0.5f;    // 环底边与机身内容顶边的间隙（世界单位），跟着减半
     private const int RingFillSteps = 0;         // 0 = 不量化（逐帧连续填）
+    private const int RingTextureSize = 64;      // 与 WasherSetup 共用同一张图，两处必须一致
 
-    // GadgetsPanel：7 行 × 108 高，行间隙 22，首行中心距面板顶 64（末行底边 -898，面板高 915）。
-    // 120/10 是历史值：后来为了让 4px 与 10px 分不出区别，把行间隙从 10 让到 22，
-    // 高度就压到 108 保面板高度不变（见 ref-ui-motion.md）。
-    // 菜单必须与场景一致，否则一跑就把 7 个按钮全改回 120/10 —— 与 WasherScale 同一类雷。
-    private const float GadgetRowTop = -64f;
-    private const float GadgetRowStep = 130f;
+    // GadgetsPanel 现在是**可滚动 viewport**（PixelRowScroll + RectMask2D）：
+    //   viewport 620×915（比按钮宽 30，左右各 15 装下 HoverJelly 悬停膨胀的 11px）
+    //   Content 590 宽居中，高度由 PixelRowScroll 按行数现算（8 行 = 1038px）
+    //   行高 108 / 行间隙 22 / 行距 130 / 首行中心距内容顶 64 / 内容上下留白各 10
+    // 行高 108 与行间隙 22 是项目约定（见 ref-ui-motion.md），滚动不改它们 ——
+    // 8 行 1038px 装进 915px 视口，可滚 123px。
+    private const float GadgetViewportWidth = 620f;
+    private const float GadgetViewportHeight = 915f;
+    // 左边缘：30（旧面板）→ 15（本菜单原来写的）→ **5**（2026-10-01 对齐 EconomyShopSetup）。
+    // 两个装配菜单都在写这一个值：EconomyShopSetup.ConfigureScrollbar 里为了给滚动条让出宽度写 5，
+    // 本菜单以前写 15 —— 谁最后跑谁说了算，场景里实际是 5。而滚动条 2026-10-01 左移到 x=628
+    // （左边缘 620）之后，视口若回到 15，按钮右边缘会到 620，正好被滚动条压住。
+    // 所以这里必须也是 5：内容水平位置与场景一致，菜单复跑才有 0 差异。
+    private const float GadgetViewportX = 5f;
+    private const float GadgetPanelTopY = -285f;
+    private const float GadgetContentWidth = 590f;
     private const float GadgetButtonWidth = 590f;
     private const float GadgetButtonHeight = 108f;
-    private const float GadgetButtonCenterX = 295f;
+    private const float GadgetRowGap = 22f;
+    private const float GadgetRowStep = 130f;    // = 108 + 22
+    private const float GadgetRowTop = -64f;     // 首行中心距内容顶
+    private const float GadgetMargin = 10f;      // 首行顶边之上的留白（= GadgetRowTop - 行高/2）
+
+    // 10 行的顺序。PLATE VALUE 在首行、MULTIPLE PLATES 在第 2 行：它与 PURPLE SPONGE 同属「手工处理盘子」
+    // 这一类，放在一起语义连贯；其余 8 行相对旧布局整体下移一行。
+    // **这个数组是行数与顺序的唯一来源**：末尾新增一行时，LotteryGame.RefreshGadgetRows 的
+    // gadgetRows / visible 两张表必须同步加一项，否则运行时排布会少一行、末尾那行留在原位。
+    private static readonly string[] GadgetRowNames =
+    {
+        "PlateValueButton", "MultiplePlatesButton", "PurpleSpongeButton", "WasherUnlockButton", "SpeedUpgradeButton",
+        "CapacityUpgradeButton", "ScratcherUnlockButton", "ScratcherSpeedButton", "ScratcherCapacityButton",
+        "AutoFeedButton"
+    };
 
     private class TierDef
     {
@@ -110,7 +139,7 @@ public static class ScratcherSetup
         // 7) 回填机器组件
         AutoScratcher scratcher = WireScratcher(machine, sprites, jelly, ring, effect, container);
 
-        // 8) GadgetsPanel 改 7 行 + 三个新按钮
+        // 8) GadgetsPanel 改成可滚动 viewport + 8 行按钮
         BuildGadgetPanel(game, scratcher);
 
         // 9) 票 Prefab：补上入场动画与拖拽组件，并把票种写进去
@@ -400,7 +429,7 @@ public static class ScratcherSetup
         rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
         rect.pivot = new Vector2(0.5f, 0.5f);
         rect.anchoredPosition = Vector2.zero;
-        rect.sizeDelta = new Vector2(128f, 128f);
+        rect.sizeDelta = new Vector2(RingTextureSize, RingTextureSize);
 
         Image image = imageObject.GetComponent<Image>();
         if (image == null) image = Undo.AddComponent<Image>(imageObject);
@@ -460,7 +489,7 @@ public static class ScratcherSetup
         return scratcher;
     }
 
-    // ---- GadgetsPanel：7 行 + 3 个新按钮 -----------------------------------
+    // ---- GadgetsPanel：可滚动 viewport + 8 行 -------------------------------
 
     private static void BuildGadgetPanel(LotteryGame game, AutoScratcher scratcher)
     {
@@ -473,41 +502,149 @@ public static class ScratcherSetup
             return;
         }
 
-        string[] rowNames = { "PurpleSpongeButton", "WasherUnlockButton", "SpeedUpgradeButton",
-                              "CapacityUpgradeButton", "ScratcherUnlockButton", "ScratcherSpeedButton",
-                              "ScratcherCapacityButton" };
-        for (int i = 0; i < rowNames.Length; i++)
+        BuildScrollViewport(panel);
+        Transform content = EnsureContent(panel);
+        if (content == null) return;
+
+        // 既有 7 行整体下移一行（第 1 行留给 MULTIPLE PLATES）。
+        // 行在改版前是 GadgetsPanel 的直属子物体、之后挂在 Content 下，
+        // 所以查找必须从 panel 往下扫整棵子树，两个位置都要能找到 —— 否则第二次跑菜单就只剩新行。
+        for (int i = 1; i < GadgetRowNames.Length; i++)
         {
-            Transform row = panel.Find(rowNames[i]);
-            if (row == null) continue;
+            Transform row = FindInChild(panel, GadgetRowNames[i]);
+            if (row == null)
+            {
+                Debug.LogWarning("[ScratcherSetup] GadgetsPanel 下找不到 " + GadgetRowNames[i]);
+                continue;
+            }
+            if (row.parent != content)
+                Undo.SetTransformParent(row, content, "Gadget row → Content");
             PlaceRow(row, i);
         }
 
         // 新按钮一律从紫色海绵克隆：字体、内缩、HoverJelly 参数、Image 色值全部一次对齐，
         // 比手搓一套 UI 靠谱得多（手搓最容易漏掉的就是 TMP 的字号和 HoverJelly 的幅度）。
-        GameObject template = panel.Find("PurpleSpongeButton") != null
-            ? panel.Find("PurpleSpongeButton").gameObject
-            : null;
+        Transform templateRow = content.Find("PurpleSpongeButton");
+        GameObject template = templateRow != null ? templateRow.gameObject : null;
         if (template == null)
         {
             Debug.LogError("[ScratcherSetup] 找不到克隆模板 PurpleSpongeButton");
             return;
         }
 
-        Button unlock = EnsureRowButton(panel, template, "ScratcherUnlockButton", 4,
+        // EnsureRowButton 是幂等的：已存在就只重摆位置 + 重连 onClick。
+        Button plateValue = EnsureRowButton(content, template, "PlateValueButton", 0, game, game.UpgradePlateValue);
+        // 占位文案里的数值一律取 LotteryEconomy —— 手写 "$1 -> $3" 会在经济表改版后变成谎言。
+        SetRowLabel(plateValue.transform, "PLATE VALUE  $" + LotteryEconomy.PlateValueCosts[0]
+            + "\n$" + LotteryEconomy.PlateValues[0] + " -> $" + LotteryEconomy.PlateValues[1]
+            + "  LV 0/" + LotteryEconomy.PlateValueCosts.Length);
+        Button multi = EnsureRowButton(content, template, "MultiplePlatesButton", 1,
+            game, game.BuyMultiplePlates);
+        // 新行是从 PurpleSpongeButton 克隆的，TMP 文案会一起带过来 —— 不覆写的话
+        // Hierarchy 预览和场景里那块按钮会一直显示「PURPLE SPONGE  $30」。
+        // 这里写**未解锁**态的占位文案，数值直接取 LotteryGame 的常数：
+        // 运行时 RefreshUI 每帧会用同一组常数重写，两边永远一致。
+        SetRowLabel(multi.transform, "MULTIPLE PLATES  $" + LotteryGame.MultiPlateCost
+            + "\nPLATES UP TO " + LotteryGame.MultiPlateBaseCapacity);
+        Button unlock = EnsureRowButton(content, template, "ScratcherUnlockButton", 6,
             game, game.BuyScratcher);
-        Button speed = EnsureRowButton(panel, template, "ScratcherSpeedButton", 5,
+        Button speed = EnsureRowButton(content, template, "ScratcherSpeedButton", 7,
             game, game.UpgradeScratcherSpeed);
-        Button capacity = EnsureRowButton(panel, template, "ScratcherCapacityButton", 6,
+        Button capacity = EnsureRowButton(content, template, "ScratcherCapacityButton", 8,
             game, game.UpgradeScratcherCapacity);
+        // 自动投喂：依附刮票机，未解锁刮票机时 RefreshGadgetRows 会整行隐藏。
+        // 文案取 LotteryEconomy 的常数，运行时 RefreshUI 会用同一组常数覆写。
+        Button autoFeed = EnsureRowButton(content, template, "AutoFeedButton", 9,
+            game, game.BuyAutoFeed);
+        SetRowLabel(autoFeed.transform, "AUTO FEED  $" + LotteryEconomy.AutoFeedCost + "\nSKIP THE DRAG");
+
+        // 行数变了就把 content 高度与滚动位置重新落定一次（编辑器里 Awake 不会跑）。
+        PixelRowScroll scroll = panel.GetComponent<PixelRowScroll>();
+        if (scroll != null)
+        {
+            var sso = new SerializedObject(scroll);
+            sso.FindProperty("content").objectReferenceValue = content as RectTransform;
+            sso.FindProperty("rowPitch").floatValue = GadgetRowStep;
+            sso.FindProperty("rowHeight").floatValue = GadgetButtonHeight;
+            sso.FindProperty("rowGap").floatValue = GadgetRowGap;
+            sso.FindProperty("topMargin").floatValue = GadgetMargin;
+            sso.FindProperty("bottomMargin").floatValue = GadgetMargin;
+            sso.FindProperty("rowCount").intValue = GadgetRowNames.Length;
+            sso.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(scroll);
+            scroll.ApplyLayout();
+        }
 
         var so = new SerializedObject(game);
         so.FindProperty("scratcher").objectReferenceValue = scratcher;
+        so.FindProperty("multiplePlatesButton").objectReferenceValue = multi;
+        so.FindProperty("plateValueButton").objectReferenceValue = plateValue;
         so.FindProperty("scratcherUnlockButton").objectReferenceValue = unlock;
         so.FindProperty("scratcherSpeedButton").objectReferenceValue = speed;
         so.FindProperty("scratcherCapacityButton").objectReferenceValue = capacity;
+        so.FindProperty("autoFeedButton").objectReferenceValue = autoFeed;
         so.ApplyModifiedPropertiesWithoutUndo();
         EditorUtility.SetDirty(game);
+    }
+
+    // 面板本身当视口：620 宽（比按钮宽 30，左右各 15 装下 HoverJelly 悬停膨胀的 11px）。
+    // 左边缘从 30 挪到 15 —— 内容仍然居中在 325，水平位置一点没动。
+    private static void BuildScrollViewport(Transform panel)
+    {
+        var viewport = panel as RectTransform;
+        if (viewport != null)
+        {
+            Undo.RecordObject(viewport, "Gadget viewport");
+            viewport.anchorMin = new Vector2(0f, 1f);
+            viewport.anchorMax = new Vector2(0f, 1f);
+            viewport.pivot = new Vector2(0f, 1f);
+            viewport.anchoredPosition = new Vector2(GadgetViewportX, GadgetPanelTopY);
+            viewport.sizeDelta = new Vector2(GadgetViewportWidth, GadgetViewportHeight);
+            viewport.localScale = Vector3.one;
+            EditorUtility.SetDirty(viewport);
+        }
+
+        // RectMask2D 不需要自身有 Graphic：它把裁剪矩形推给子物体的 IClippable 实现。
+        // 比 Mask 便宜 —— 不用模板缓冲，Overlay 画布下不多一遍 pass。
+        if (panel.GetComponent<RectMask2D>() == null) Undo.AddComponent<RectMask2D>(panel.gameObject);
+
+        PixelRowScroll scroll = panel.GetComponent<PixelRowScroll>();
+        if (scroll == null) scroll = Undo.AddComponent<PixelRowScroll>(panel.gameObject);
+        EditorUtility.SetDirty(scroll);
+    }
+
+    // Content：590 宽居中，高度由 PixelRowScroll 现算。
+    // 它自己挂一个全透明的 Image 当**滚动接收面** —— Button 之间 22px 的缝、
+    // 两侧各 15px 的余量都没有 raycast target，滚轮落在那里会掉。Image 的 raycast
+    // 与颜色无关（alphaHitTestMinimumThreshold 默认 0），透明也能接住事件。
+    private static Transform EnsureContent(Transform panel)
+    {
+        Transform existing = panel.Find(ContentName);
+        GameObject content;
+        if (existing == null)
+        {
+            content = new GameObject(ContentName, typeof(RectTransform), typeof(UnityEngine.UI.Image));
+            Undo.RegisterCreatedObjectUndo(content, ContentName);
+            content.transform.SetParent(panel, false);
+        }
+        else content = existing.gameObject;
+
+        var rect = (RectTransform)content.transform;
+        Undo.RecordObject(rect, "Gadget content");
+        rect.anchorMin = new Vector2(0.5f, 1f);
+        rect.anchorMax = new Vector2(0.5f, 1f);
+        rect.pivot = new Vector2(0.5f, 1f);
+        rect.anchoredPosition = Vector2.zero;
+        rect.sizeDelta = new Vector2(GadgetContentWidth, rect.sizeDelta.y);
+        rect.localScale = Vector3.one;
+        EditorUtility.SetDirty(rect);
+
+        var catcher = content.GetComponent<UnityEngine.UI.Image>();
+        if (catcher == null) catcher = Undo.AddComponent<UnityEngine.UI.Image>(content);
+        catcher.color = Color.clear;
+        catcher.raycastTarget = true;
+        EditorUtility.SetDirty(catcher);
+        return content.transform;
     }
 
     // 在 root 的整棵子树里按名字找物体，**包含隐藏物体**。
@@ -515,12 +652,36 @@ public static class ScratcherSetup
     {
         GameObject root = GameObject.Find(rootName);
         if (root == null) return null;
+        return FindInChild(root.transform, childName);
+    }
+
+    private static Transform FindInChild(Transform root, string childName)
+    {
         Transform[] all = root.GetComponentsInChildren<Transform>(true);
         for (int i = 0; i < all.Length; i++)
             if (all[i].name == childName) return all[i];
         return null;
     }
 
+    // 改掉从模板克隆来的 TMP 文案。只认名为 Label 的那个节点：
+    // 按钮里还有一行 Details 小字，扫「第一个 TMP」会写错地方。
+    private static void SetRowLabel(Transform row, string text)
+    {
+        Transform label = FindInChild(row, "Label");
+        if (label == null)
+        {
+            Debug.LogWarning("[ScratcherSetup] " + row.name + " 下找不到 Label 节点，文案未写。");
+            return;
+        }
+        var tmp = label.GetComponent<TMPro.TMP_Text>();
+        if (tmp == null) return;
+        tmp.text = text;
+        EditorUtility.SetDirty(tmp);
+    }
+
+    // 行锚在父物体的左上角，x 取父物体宽度的一半 = 水平居中。
+    // 用**父物体的**宽度而不是 GadgetsPanel 的：按钮现在挂在 590 宽的 Content 下，
+    // 视口是 620 宽，用面板宽度会把 8 个按钮整体推右 15px。
     private static void PlaceRow(Transform row, int index)
     {
         var rect = (RectTransform)row;
@@ -528,7 +689,10 @@ public static class ScratcherSetup
         rect.anchorMin = new Vector2(0f, 1f);
         rect.anchorMax = new Vector2(0f, 1f);
         rect.pivot = new Vector2(0.5f, 0.5f);
-        rect.anchoredPosition = new Vector2(GadgetButtonCenterX, GadgetRowTop - index * GadgetRowStep);
+        float parentWidth = rect.parent is RectTransform parentRect
+            ? parentRect.rect.width
+            : GadgetContentWidth;
+        rect.anchoredPosition = new Vector2(parentWidth * 0.5f, GadgetRowTop - index * GadgetRowStep);
         rect.sizeDelta = new Vector2(GadgetButtonWidth, GadgetButtonHeight);
         rect.localScale = Vector3.one;
         EditorUtility.SetDirty(rect);
@@ -613,6 +777,27 @@ public static class ScratcherSetup
             {
                 if (root.GetComponent<TicketFlyIn>() == null) root.AddComponent<TicketFlyIn>();
                 if (root.GetComponent<TicketDragger>() == null) root.AddComponent<TicketDragger>();
+
+                // 拖动惯性（2026-09-29）：与 SpongeDrag 同一套，用组件自己的默认值
+                // （maxSpeed 90 / 减速度 320 / 反弹 0.4）。TicketDragger.Awake 会把它的
+                // Clamp 指到票自己的夹取上，所以这里不需要连任何引用。
+                if (root.GetComponent<DragInertia>() == null) root.AddComponent<DragInertia>();
+
+                // 刮开后的退场：先缩小再销毁（2026-09-29）。参数同样用组件默认值
+                // （0.3s / 线性 / 缩到 5%，与 AutoScratcher 出槽一致）。
+                if (root.GetComponent<ShrinkOut>() == null) root.AddComponent<ShrinkOut>();
+
+                // 票改成**按下即抓**（2026-09-29）。与刮奖的分流不再靠时间，而是靠**按在票面哪一块**：
+                // 涂层（票面中间那块 96×40 texel）是刮奖区，它外面那一圈是拖动把手
+                // （判定见 ScratchCard.CoversPoint / TicketDragger）。
+                // 这个值必须与 TicketDragger 字段默认值一致，否则复跑一次菜单就把按下即抓改回 0.12s。
+                var dragSo = new SerializedObject(root.GetComponent<TicketDragger>());
+                var holdProp = dragSo.FindProperty("holdTime");
+                if (holdProp != null)
+                {
+                    holdProp.floatValue = 0f;
+                    dragSo.ApplyModifiedPropertiesWithoutUndo();
+                }
 
                 var ticket = root.GetComponent<LotteryTicket>();
                 if (ticket == null)

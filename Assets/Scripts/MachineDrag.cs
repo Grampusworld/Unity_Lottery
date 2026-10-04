@@ -14,8 +14,8 @@ using UnityEngine.InputSystem;
 //   ③ 机身内部全是「按 transform.position 现算的绝对坐标」：槽位里的迷你票、
 //      机内盘子、进度环（都是同级物体或绝对坐标），拖动时必须每帧重排。
 //
-// 按下即拖（不像海绵/票需要「按住 0.22s」），所以按下那一帧必须先把这次点击让出去，
-// 让路对象与理由写在 DragBodyRegistry 顶部的注释里（海绵 + 桌面上的票）。
+// 按下即拖（不像海绵/票需要「按住 0.12s」），所以按下那一帧必须先把这次点击让出去。
+// 让路对象与理由集中在 DragBodyRegistry.Claimant（海绵 + 桌面上的票）。
 [RequireComponent(typeof(SpriteRenderer))]
 [DisallowMultipleComponent]
 public class MachineDrag : MonoBehaviour
@@ -27,12 +27,13 @@ public class MachineDrag : MonoBehaviour
     [SerializeField] private AutomaticDishWasher washer;
 
     [Header("Bounds")]
-    [Tooltip("可拖范围按机身半宽内缩的余量系数。0.75 与海绵一致（给 HoverJelly 1.5 倍峰值留空间）。")]
-    [SerializeField, Range(0.5f, 1f)] private float edgeMargin = 0.75f;
+    [Tooltip("完整外观的安全缩放，至少预留 HoverJelly 的最大尺寸。")]
+    [SerializeField, Range(1.5f, 2f)] private float edgeMargin = 1.5f;
+    [SerializeField] private RectTransform shopPanel;
     [Tooltip("桌面贴图（Table）。留空自动从海绵实例读，保证两台机器与海绵用的是同一份参数。")]
     [SerializeField] private SpriteRenderer tableSurface;
-    [Tooltip("Table.png 中有颜色的桌面范围，单位为贴图像素（左下角为原点）。")]
-    [SerializeField] private Rect tabletopPixels = new Rect(58f, 128f, 99f, 57f);
+    [Tooltip("Table.png 黑色内框之间的橙色桌面范围，单位为贴图像素（左下角为原点）。")]
+    [SerializeField] private Rect tabletopPixels = new Rect(63f, 133f, 89f, 47f);
 
     [Header("References")]
     [SerializeField] private Camera inputCamera;
@@ -51,6 +52,9 @@ public class MachineDrag : MonoBehaviour
     private Vector3 designPosition;
     private Vector3 grabOffset;      // 鼠标世界点 → 机身 transform.position（pivot），**不是**可见内容中心
     private bool dragging;
+    private WasherProgressRing progressRing;
+    private ScratcherCountLabel countLabel;
+    private System.Func<Vector3, Vector3> tableClamp;
 
     public bool IsDragging => dragging;
 
@@ -65,6 +69,9 @@ public class MachineDrag : MonoBehaviour
         if (inertia == null) inertia = GetComponent<DragInertia>();
         if (jelly == null) jelly = GetComponent<HoverJelly>();
         if (tableSurface == null) AdoptTableFromSponge();
+        progressRing = scratcher != null ? scratcher.ProgressRing : (washer != null ? washer.ProgressRing : null);
+        countLabel = GetComponent<ScratcherCountLabel>();
+        tableClamp = ClampToTable;
         if (inertia != null) inertia.Clamp = ClampDrag;
         RefreshBody(true);
     }
@@ -76,6 +83,7 @@ public class MachineDrag : MonoBehaviour
         if (sponge == null) return;
         tableSurface = sponge.TableSurface;
         tabletopPixels = sponge.TabletopPixels;
+        if (shopPanel == null) shopPanel = sponge.ShopPanel;
     }
 
     private void OnDisable()
@@ -91,6 +99,16 @@ public class MachineDrag : MonoBehaviour
 
     private void Update()
     {
+        if (MainMenuScreen.GameplayBlocked)
+        {
+            if (dragging)
+            {
+                dragging = false;
+                if (jelly != null) jelly.SetPressed(false);
+                if (inertia != null) inertia.Stop();
+            }
+            return;
+        }
         RefreshBody(false);
 
         if (inertia != null && inertia.Sliding) return;   // 滑行期间 position 归 DragInertia 独占
@@ -127,14 +145,13 @@ public class MachineDrag : MonoBehaviour
         }
 
         if (!justPressed) return;
-        // 让路：海绵画在机器上层（order 5 > 4）。
-        if (DragBodyRegistry.Hit(world, DragBodyKind.Sponge)) return;
-        // 让路：票要按住 0.12s 才拿得起来，机器在按下这一帧就抢走了 ——
-        // 票一旦被压在机器上就永远抓不回来。层次上票在机器下面，这里是刻意例外。
-        if (DragBodyRegistry.Hit(world, DragBodyKind.Ticket)) return;
+        // 仲裁：这次按下归机器才算数。机器是按下即拖，必须让给海绵（层次更高）
+        // 与票（长按型，让路否则被压住就抓不回来）。判据集中在 DragBodyRegistry.Claimant。
+        if (DragBodyRegistry.Claimant(world) != DragBodyKind.Machine) return;
         if (!ContainsPoint(world)) return;
 
         dragging = true;
+        LotterySfx.Play(LotterySfx.Sound.DragStart);
         // 抓取偏移必须和 ClampDrag 的入参语义对齐 —— 它的入参是「机身 transform.position」，
         // centerOffset 由它自己补。所以这里只能按 pivot 记。
         // 用可见内容中心记（`transform.position + centerOffset - world`）会多补一次 centerOffset，
@@ -154,12 +171,14 @@ public class MachineDrag : MonoBehaviour
             if (jelly != null) jelly.SetPressed(false);
         }
         if (inertia != null) inertia.Stop();
-        transform.position = designPosition;
+        RefreshBody(true);
+        transform.position = ClampDrag(designPosition);
     }
 
     private void EndDrag()
     {
         dragging = false;
+        LotterySfx.Play(LotterySfx.Sound.Drop);
         if (jelly != null) jelly.SetPressed(false);
         if (inertia != null) inertia.Release();      // 滑行从这里接管
     }
@@ -168,7 +187,7 @@ public class MachineDrag : MonoBehaviour
     // 无人操作的情况下真的改动位置，正常玩是空转。
     private void SettleIdle()
     {
-        Vector3 settled = DragBodyRegistry.Resolve(this, transform.position, transform.position);
+        Vector3 settled = ClampDrag(transform.position);
         if (settled == transform.position) return;
         transform.position = settled;
     }
@@ -188,7 +207,11 @@ public class MachineDrag : MonoBehaviour
 
         Vector2 nextHalf = size * 0.5f;
         Vector3 nextOffset = center - transform.position;
-        if (!force && registered
+        // 「值没变」不足以跳过：登记表是 static，Play 中一次脚本重编译会把整张表清空，
+        // 而 registered/registeredHalf 这些缓存值还在 —— 只看缓存就会一直 early-return，
+        // 机器从此退出仲裁（Claimant 不再返回 Machine）＝拖不动，且全程无报错。
+        // 所以先确认「我还在表里」，再比几何值。
+        if (!force && DragBodyRegistry.IsRegistered(this) && registered
             && Mathf.Approximately(nextHalf.x, registeredHalf.x)
             && Mathf.Approximately(nextHalf.y, registeredHalf.y)
             && (nextOffset - registeredOffset).sqrMagnitude < 1e-8f)
@@ -234,10 +257,40 @@ public class MachineDrag : MonoBehaviour
     private Vector3 ClampDrag(Vector3 desired)
     {
         if (inputCamera == null) return desired;
-        Bounds area = DragBounds.Playable(tableSurface, tabletopPixels, inputCamera, desired.z);
-        Vector3 center = DragBounds.ClampCenter(desired + centerOffset, half, edgeMargin, area);
-        Vector3 bordered = center - centerOffset;
-        return DragBodyRegistry.Resolve(this, transform.position, bordered);
+        return DragBodyRegistry.Resolve(this, ClampToTable(transform.position), ClampToTable(desired), tableClamp);
+    }
+
+    public Bounds VisualBounds
+    {
+        get
+        {
+            float scale = Mathf.Max(HoverJelly.MaxScale, edgeMargin);
+            Bounds relative = new Bounds(centerOffset * scale, new Vector3(half.x * 2f * scale, half.y * 2f * scale, 0f));
+            relative.Encapsulate(new Bounds(centerOffset, new Vector3(half.x * 2f, half.y * 2f, 0f)));
+            if (progressRing != null)
+            {
+                Bounds ringBounds = progressRing.GetWorldBounds(transform.position + centerOffset, half * 2f);
+                ringBounds.center -= transform.position;
+                relative.Encapsulate(ringBounds);
+            }
+            if (countLabel != null)
+            {
+                Bounds labelBounds = countLabel.GetWorldBounds();
+                labelBounds.center -= transform.position;
+                relative.Encapsulate(labelBounds);
+            }
+            relative.center += transform.position;
+            return relative;
+        }
+    }
+
+    private Vector3 ClampToTable(Vector3 desired)
+    {
+        if (inputCamera == null) return desired;
+        Bounds visual = VisualBounds;
+        visual.center -= transform.position;
+        Bounds area = DragBounds.Playable(tableSurface, tabletopPixels, inputCamera, desired.z, shopPanel);
+        return DragBounds.ClampVisual(desired, visual, area);
     }
 
     private Vector3 ScreenToWorld(Vector2 screen)

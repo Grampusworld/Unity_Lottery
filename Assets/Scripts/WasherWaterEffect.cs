@@ -92,6 +92,9 @@ public class WasherWaterEffect : MonoBehaviour
     private int lastStreakPhase = int.MinValue;
 
     public bool IsRunning => running;
+    public Bounds WindowLocalBounds => new Bounds(
+        new Vector3(windowCenterOffset.x * Unit, windowCenterOffset.y * Unit, 0f),
+        new Vector3(windowSize.x * Unit, windowSize.y * Unit, 0f));
 
     // 1 texel 在机身局部空间里的长度（机身 sprite 是 PPU 100）。
     private float Unit => 1f / Mathf.Max(1f, pixelsPerUnit);

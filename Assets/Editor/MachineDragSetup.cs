@@ -29,7 +29,7 @@ namespace Lottery.EditorTools
         const string Tag = "[MachineDrag] ";
 
         // 桌面几何的兜底值（与 SpongeDrag 的 C# 默认值一致）。只在场景里连海绵都找不到时用。
-        static readonly Rect FallbackTabletop = new Rect(58f, 128f, 99f, 57f);
+        static readonly Rect FallbackTabletop = new Rect(63f, 133f, 89f, 47f);
 
         // 设计位（机身后回位用，见 MachineDrag.ResetToDesignPosition）。
         // 洗盘机没挪过，用不到迁移；刮票机与海绵这一轮各左移了一段。
@@ -113,6 +113,8 @@ namespace Lottery.EditorTools
             SetRef(so, "inertia", inertia);
             SetRef(so, "jelly", machine.GetComponent<HoverJelly>());
             SetRef(so, "inputCamera", Camera.main);
+            so.FindProperty("edgeMargin").floatValue = HoverJelly.MaxScale;
+            SetRef(so, "shopPanel", sponge != null ? sponge.ShopPanel : null);
             SetRef(so, "tableSurface", sponge != null ? sponge.TableSurface : null);
             SetRect(so, "tabletopPixels", sponge != null ? sponge.TabletopPixels : FallbackTabletop);
             so.ApplyModifiedPropertiesWithoutUndo();

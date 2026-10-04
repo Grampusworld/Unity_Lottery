@@ -7,6 +7,7 @@ using UnityEngine;
 // 所以这里只提供算法，参数由各自从海绵实例读（见 MachineDrag.Awake 的回退）。
 public static class DragBounds
 {
+    private static readonly Vector3[] uiCorners = new Vector3[4];
     // 相机在给定深度上的可视矩形（正交相机；半透明相机用 ViewportToWorldPoint 才拿得到
     // 真实 pixelRect —— 编辑器里 Screen.width 给的是 Game 视图面板尺寸）。
     public static Bounds Visible(Camera camera, float z)
@@ -37,13 +38,36 @@ public static class DragBounds
 
     // 可拖范围 = 桌面内表面 ∩ 相机可视区。
     // 屏幕比桌子大时以桌子为准（拖不出桌沿），反过来以屏幕为准（别拖出画面）。
-    public static Bounds Playable(SpriteRenderer tableSurface, Rect tabletopPixels, Camera camera, float z)
+    public static Bounds Playable(SpriteRenderer tableSurface, Rect tabletopPixels, Camera camera, float z,
+        RectTransform shopPanel = null)
     {
         Bounds visible = Visible(camera, z);
         Bounds table = Tabletop(tableSurface, tabletopPixels, visible);
         Bounds result = new Bounds();
         result.SetMinMax(Vector3.Max(table.min, visible.min), Vector3.Min(table.max, visible.max));
+        if (shopPanel != null && shopPanel.gameObject.activeInHierarchy)
+        {
+            Canvas canvas = shopPanel.GetComponentInParent<Canvas>();
+            Camera uiCamera = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay
+                ? canvas.worldCamera : null;
+            shopPanel.GetWorldCorners(uiCorners);
+            float screenRight = float.NegativeInfinity;
+            for (int i = 0; i < uiCorners.Length; i++)
+                screenRight = Mathf.Max(screenRight, RectTransformUtility.WorldToScreenPoint(uiCamera, uiCorners[i]).x);
+            float depth = Mathf.Abs(camera.transform.position.z - z);
+            float right = camera.ScreenToWorldPoint(new Vector3(screenRight, 0f, depth)).x;
+            Vector3 low = result.min;
+            low.x = Mathf.Min(result.max.x, Mathf.Max(low.x, right + 0.1f));
+            result.SetMinMax(low, result.max);
+        }
         return result;
+    }
+
+    // 相对 pivot 的完整外观范围，包含果冻峰值、进度环和计数牌。
+    public static Vector3 ClampVisual(Vector3 pivot, Bounds relativeVisual, Bounds area)
+    {
+        return ClampCenter(pivot + relativeVisual.center, relativeVisual.extents, 1f, area)
+            - relativeVisual.center;
     }
 
     // 把「可见包围盒中心」夹进可拖范围。half 是可见包围盒的一半，margin 是额外余量系数。

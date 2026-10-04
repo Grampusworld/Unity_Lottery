@@ -57,7 +57,9 @@ public class PlateFlyIn : MonoBehaviour
     [SerializeField] private Rect tableArea = new Rect(-28.3f, -37.3f, 124.6f, 75.1f);
     [Tooltip("盘子包围盒再乘这个系数当占位，留出果冻峰值与像素取整的余量。")]
     [SerializeField, Range(1f, 1.3f)] private float clearanceScale = 1.1f;
-    [SerializeField, Range(1, 128)] private int maxAttempts = 48;
+    [Tooltip("随机撒点次数。桌上同时有 10 张盘子 + 两台机器 + 一张票时可用率极低，\n" +
+             "次数不够就会落到网格兜底、再落到出生点（多张盘子叠在一起）。")]
+    [SerializeField, Range(1, 256)] private int maxAttempts = 96;
 
     [Header("Feedback")]
     [Tooltip("悬停果冻组件。飞行期间禁用，落地收敛那一帧才交还给玩家。")]
@@ -68,6 +70,13 @@ public class PlateFlyIn : MonoBehaviour
     // 出生点（PlateSpawnPoint）。落点全被挡下或者拿不到盘子尺寸时退回这里。
     public Vector3 Home => home;
 
+    // 这一帧之后的落点。给「后续盘子避开已有盘子」用：飞行中的盘子还在屏幕右边外，
+    // 直接拿它的实时包围盒当禁区等于没算，必须平移到落点上才是它真实的占位。
+    // 正常路径上 SetObstacles 会先调 EnsureLanding() 把落点定下来；万一还没定，
+    // 这里退回当前位置让调用方算出零偏移（= 旧行为），不会更糟。
+    public bool HasLanding { get; private set; }
+    public Vector3 LandingPoint => HasLanding ? target : transform.position;
+
     // 盘子的原始缩放。以后要是有别的系统在飞行途中接手这个物体，
     // 必须用这个基准，而不是把飞行中的挤压形变当成基准。
     public Vector3 BaseScale => baseScale;
@@ -75,6 +84,9 @@ public class PlateFlyIn : MonoBehaviour
     public event System.Action Landed;
 
     private readonly List<Rect> obstacles = new List<Rect>();
+    // 枚举空位用的临时表。做成字段而不是局部变量，是为了让这张表跨调用复用 ——
+    // 每次出盘子都新建一个 List 是白扔一次分配。
+    private readonly List<Vector2> cellBuffer = new List<Vector2>(64);
 
     private SpriteRenderer body;
     private DirtyPlate plate;
@@ -127,9 +139,31 @@ public class PlateFlyIn : MonoBehaviour
         transform.position = new Vector3(SpawnX(), home.y, home.z);
     }
 
+    // 抽落点，**幂等**。Start 里调一次；但同一帧里被创建的多张盘子（Debug 面板连点）
+    // 需要更早拿到彼此的落点 —— 后创建的那张在自己的 SetObstacles 阶段就会提前把
+    // 前面几张的落点定下来。不这么做的话，同一帧创建的两张盘子都还停在屏幕外的
+    // 出生点，互相看不见，会抽到同一个位置叠在一起。
+    public bool TryEnsureLanding()
+    {
+        if (HasLanding) return true;
+        if (!TryPickLandingPoint(out target)) return false;
+        HasLanding = true;
+        return true;
+    }
+
+    public void EnsureLanding()
+    {
+        if (!TryEnsureLanding())
+        {
+            target = home;
+            HasLanding = true;
+            Debug.LogWarning("[PlateFlyIn] No free landing position.", this);
+        }
+    }
+
     private void Start()
     {
-        target = PickLandingPoint();
+        EnsureLanding();
         start = new Vector3(SpawnX(), target.y, target.z);
 
         float distance = Mathf.Abs(start.x - target.x);
@@ -182,7 +216,8 @@ public class PlateFlyIn : MonoBehaviour
     // 由 LotteryGame 在 Instantiate 之后立刻调用：把「不该压到的世界物体」交给这里，
     // 各自取 Renderer 世界包围盒。传 null 会被跳过。
     // 机器一直算禁区（未解锁时看不见，但解锁后就在那儿，不能等那时候盘子已经压上去了）；
-    // 彩票只在出票那一刻桌上有票时才排除 → 桌上空着的时候整个桌面都能用。
+    // 彩票只在出票那一刻桌上有票时才排除 → 桌上空着的时候整个桌面都能用；
+    // 是否把其他盘子传入由调用方决定；当前多盘玩法允许盘子互相重叠。
     public void SetObstacles(Transform[] roots)
     {
         obstacles.Clear();
@@ -193,6 +228,18 @@ public class PlateFlyIn : MonoBehaviour
             if (root == null) continue;
 
             Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
+
+            // 还在飞的那张盘子（MULTIPLE PLATES 解锁后桌上会有多张）：它的实时包围盒
+            // 一在屏幕右边外、二带着飞行挤压的形变，两头都不对。直接用静止尺寸的占位
+            // 平移到落点上 —— 那才是它落定后真正占的地方。
+            PlateFlyIn sibling = root.GetComponent<PlateFlyIn>();
+            if (sibling != null && sibling.IsFlying)
+            {
+                sibling.EnsureLanding();       // 同一帧创建的多张盘子：先把它的落点定下来
+                obstacles.Add(sibling.FootprintAt(sibling.LandingPoint));
+                continue;
+            }
+
             bool any = false;
             Bounds bounds = new Bounds();
             for (int r = 0; r < renderers.Length; r++)
@@ -213,17 +260,27 @@ public class PlateFlyIn : MonoBehaviour
             // 直接拿来当禁区等于没算。TicketFlyIn 暴露了落点 Home，把包围盒平移到落点上
             // 才是它真实的占位。已经落地或者被玩家拖走的票用实时包围盒 —— 那才是它现在的位置。
             Vector3 offset = Vector3.zero;
-            TicketFlyIn flying = root.GetComponent<TicketFlyIn>();
-            if (flying != null && flying.IsFlying) offset = flying.Home - root.position;
+            TicketFlyIn ticket = root.GetComponent<TicketFlyIn>();
+            if (ticket != null && ticket.IsFlying) offset = ticket.Home - root.position;
 
             obstacles.Add(new Rect(bounds.min.x + offset.x, bounds.min.y + offset.y,
                 bounds.size.x, bounds.size.y));
         }
     }
 
-    private Vector3 PickLandingPoint()
+    // 盘子落定后的占位矩形（世界空间），中心由参数给定。
+    // 尺寸取**静止**尺寸：飞行中的挤压拉伸不参与 —— 每张盘子最终都是同一个大小，
+    // 占位不该随它此刻飞得多快而变化。
+    public Rect FootprintAt(Vector3 center)
     {
-        if (!randomizable) return home;
+        return new Rect(center.x - footprintHalf.x, center.y - footprintHalf.y,
+            footprintHalf.x * 2f, footprintHalf.y * 2f);
+    }
+
+    private bool TryPickLandingPoint(out Vector3 point)
+    {
+        point = home;
+        if (!randomizable) return false;
 
         float xMin = tableArea.xMin + footprintHalf.x;
         float xMax = tableArea.xMax - footprintHalf.x;
@@ -233,7 +290,7 @@ public class PlateFlyIn : MonoBehaviour
         {
             Debug.LogError("[PlateFlyIn] 桌面可用区比盘子还小（桌面 " + tableArea +
                            " / 盘子占位 " + (footprintHalf * 2f) + "），退回出生点。", this);
-            return home;
+            return false;
         }
 
         for (int i = 0; i < maxAttempts; i++)
@@ -241,25 +298,40 @@ public class PlateFlyIn : MonoBehaviour
             float x = Random.Range(xMin, xMax);
             float y = Random.Range(yMin, yMax);
             if (Blocked(x, y)) continue;
-            return new Vector3(x, y, home.z);
+            point = new Vector3(x, y, home.z);
+            return true;
         }
 
-        // 纯随机会被拒（桌上同时有票 + 两台机器都解锁时可用率约 27%），
-        // 48 次撒不中的概率 ~1e-7，但还是给一条确定性兜底：
-        // 按网格扫一遍拿第一个空位，比退回出生点更难出意外（出生点也可能正好被占）。
-        const int GridX = 16;
-        const int GridY = 10;
+        // 纯随机会被拒（桌上同时有票 + 两台机器 + 多张盘子时可用率极低），所以给一条
+        // 确定性兜底：**把所有空位找出来再随机挑一个**。
+        //
+        // 为什么不是「拿第一个空位」：按行扫出来的第一个空位永远贴在左上角，
+        // 连续加盘子会排成一条边 —— 看起来像 bug。先枚举、再随机挑，既拿到了
+        // 网格扫描能到的地方（接近排布上限），又保住了「散落在桌上」的样子。
+        //
+        // 网格 24×16：格边 4.5×3.6 世界单位，比盘子占位（19.1）细得多，
+        // 「格子空着」几乎等价于「放得下」。成本 384 次 Blocked，每次不超过
+        // 18 个矩形的比较，只在出盘子那一下跑一次。
+        const int GridX = 24;
+        const int GridY = 16;
+        cellBuffer.Clear();
         for (int gy = 0; gy < GridY; gy++)
         for (int gx = 0; gx < GridX; gx++)
         {
             float x = Mathf.Lerp(xMin, xMax, (gx + 0.5f) / GridX);
             float y = Mathf.Lerp(yMin, yMax, (gy + 0.5f) / GridY);
             if (Blocked(x, y)) continue;
-            return new Vector3(x, y, home.z);
+            cellBuffer.Add(new Vector2(x, y));
         }
 
-        Debug.LogWarning("[PlateFlyIn] 桌面可用区为空（禁区把桌子占满了），退回出生点。", this);
-        return home;
+        if (cellBuffer.Count > 0)
+        {
+            Vector2 pick = cellBuffer[Random.Range(0, cellBuffer.Count)];
+            point = new Vector3(pick.x, pick.y, home.z);
+            return true;
+        }
+
+        return false;
     }
 
     private bool Blocked(float x, float y)

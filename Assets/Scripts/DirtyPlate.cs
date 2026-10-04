@@ -33,6 +33,7 @@ public class DirtyPlate : MonoBehaviour
     // 默认 true：没挂飞入动画的盘子立刻可擦，不会因为漏挂组件就永久擦不掉。
     // 属性初始化而不是序列化字段 —— 序列化值会跟着 Prefab 走，那种默认值失效的坑项目里踩过三次。
     public bool Ready { get; set; } = true;
+    public int StackOrder { get; set; }
 
     private void Awake()
     {

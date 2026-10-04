@@ -56,7 +56,7 @@ public class HoverJelly : MonoBehaviour, IPointerEnterHandler, IPointerExitHandl
     // 再叠上「脉冲间隔 ≈ 弹簧共振周期」就会把 scale 推到 1e34（实测踩到过）。
     private const float StabilityRatio = 0.25f;
     private const float MinScale = 0.5f;           // 弹簧硬限幅：任何情况下都不允许跑飞
-    private const float MaxScale = 1.5f;
+    public const float MaxScale = 1.5f;
     private const float SettleTolerance = 0.02f;   // 收敛判定：相对幅度的 2%，对应 settleTime 的 2% 准则
     private const float MinEpsilon = 0.0001f;
     private const float DisabledFactor = 0.5f; // interactable=false 时幅度减半
@@ -137,6 +137,7 @@ public class HoverJelly : MonoBehaviour, IPointerEnterHandler, IPointerExitHandl
 
     private void Update()
     {
+        if (hitSource == HitSource.WorldBounds && MainMenuScreen.GameplayBlocked) return;
         if (hitSource == HitSource.WorldBounds) RefreshWorldHover();
         Step();
     }

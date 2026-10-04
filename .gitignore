@@ -24,3 +24,10 @@ mono_crash.*
 /LotteryTicket.cs
 /ScratchCard.cs
 /Press_Start_2P.zip
+
+# 根目录的 BGM 源文件：与 Assets/Resources/Music/ 下那份完全重复，
+# 而后者才是 Unity 通过 Resources.Load 真正加载的。提交两份只是白占 622KB。
+/happy_adveture.mp3
+
+# 本地一次性快照目录（经济改版前的脚本/场景备份），不进仓库
+.bak_*/

@@ -3,8 +3,13 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 #endif
 
-// 脏盘子的拖拽手势。与 TicketDragger 同一套分流：**按住不动 0.12 秒**拿起，
-// 拿起后抬起 ×1.06、果冻挂起（localScale 归本组件独占）、跟随指针。
+// 脏盘子的拖拽手势。与 TicketDragger 同一套骨架：拿起后抬起 ×1.06、果冻挂起
+// （localScale 归本组件独占）、跟随指针。
+//
+// 2026-09-29：`holdTime` 从 0.12 改成 **0（按下即抓）**。票之所以必须保留等待，
+// 是因为它和「左键划过刮奖」共用一个键、要靠时间分流；盘子没有第二个手势要分流，
+// 那个 0.12s 纯粹是白等，玩家能明显感到「拖不动」。
+// 保留 `holdTime` 字段与「按住不动」那条路，是为了以后真需要分流时不必改结构。
 //
 // 与票的两处刻意不同：
 //   ① 盘子没有投放目标（不进任何机器），所以松手**留在原地** —— 夹取进桌面内表面、
@@ -18,9 +23,12 @@ using UnityEngine.InputSystem;
 public class PlateDragger : MonoBehaviour
 {
     [Header("Hold to grab")]
-    [Tooltip("按住多久才算「拿起」。与票的 TicketDragger.holdTime 保持一致。")]
-    [SerializeField, Min(0.05f)] private float holdTime = 0.12f;
-    [Tooltip("按住期间允许的最大位移（世界单位），超过就判定成误按，放弃拿起。")]
+    [Tooltip("按住多久才算「拿起」。**<= 0 表示按下即抓**（不走「按住不动」那条路）。\n" +
+             "2026-09-29 定为 0：盘子没有别的鼠标手势要分流（刮奖是票的事），\n" +
+             "而 0.12s 的等待玩家能明显感到「拖不动」。票仍保留等待 —— 见 TicketDragger。")]
+    [SerializeField, Min(0f)] private float holdTime = 0f;
+    [Tooltip("按住期间允许的最大位移（世界单位），超过就判定成误按，放弃拿起。\n" +
+             "只在 holdTime > 0 时参与判定：按下即抓的话这一帧就已经拿起来了，没有「按住期间」。")]
     [SerializeField, Min(0.01f)] private float moveTolerance = 0.45f;
 
     [Header("Drag")]
@@ -93,6 +101,13 @@ public class PlateDragger : MonoBehaviour
 
     private void Update()
     {
+        if (MainMenuScreen.GameplayBlocked)
+        {
+            holding = false;
+            holdTimer = 0f;
+            if (grabbed) Drop();
+            return;
+        }
         if (plate == null || inputCamera == null) return;
 
         // 飞行 / 落地回弹期间 scale 归 PlateFlyIn：连「按住计 时」都不开始，避免跨状态接管。
@@ -108,7 +123,11 @@ public class PlateDragger : MonoBehaviour
 
         if (!pressed)
         {
-            if (grabbed) Drop();
+            if (grabbed)
+            {
+                Drop();
+                LotterySfx.Play(LotterySfx.Sound.Drop);
+            }
             holding = false;
             holdTimer = 0f;
             return;
@@ -124,10 +143,22 @@ public class PlateDragger : MonoBehaviour
         {
             if (!justPressed) return;
             if (body == null || body.sprite == null) return;
-            // 票与盘子重叠时票优先：票同样按住才能拿，两边同时抢一个按下会一起抬起。
-            if (DragBodyRegistry.Hit(world, DragBodyKind.Ticket)) return;
+            // 仲裁：盘子是最低优先级。海绵（按下即抓）、票、机器任何一方压在上面时，
+            // 这次按下都不归盘子 —— 否则盘子和它一起被拖（2026-09-29 报的 bug：
+            // 海绵与盘子重叠时，两个一起跟着手跑）。
+            if (DragBodyRegistry.Claimant(world) != DragBodyKind.Plate) return;
+            if (!DragBodyRegistry.OwnsPlatePress(plate, world)) return;
             // 命中基准是静止尺寸的包围盒，果冻缩放不会撑大命中区。
             if (!HoverJelly.ContainsPointUnscaled(body.transform, body.sprite.bounds, world, baseScale)) return;
+            // holdTime <= 0 = 按下即抓，**必须**在这里直接拿起来、不进下面那条路：
+            // 否则会先 holding、下一帧才判位移，而 moveTolerance 只有 0.45 世界单位
+            // （≈6.5 屏幕像素），下一帧只要动过一点就被判成误按、静默放弃 ——
+            // 拖拽会变成「有时拖得动有时拖不动」，比不响应更难排查。
+            if (holdTime <= 0f)
+            {
+                Grab(world);
+                return;
+            }
             holding = true;
             holdTimer = 0f;
             pressStart = world;
@@ -147,6 +178,7 @@ public class PlateDragger : MonoBehaviour
     private void Grab(Vector3 world)
     {
         grabbed = true;
+        LotterySfx.Play(LotterySfx.Sound.DragStart);
         holding = false;
         // 顺序要紧：先挂起果冻**再**写 scale（jelly.enabled=false 会同步触发
         // OnDisable → ResetToRest 写一次复位，写在抬起之后会把 1.06 抹掉）。

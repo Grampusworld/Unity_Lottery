@@ -66,7 +66,10 @@ public static class PlateFlyInSetup
             PlateDragger dragger = root.GetComponent<PlateDragger>();
             if (dragger == null) dragger = root.AddComponent<PlateDragger>();
             SerializedObject dragSo = new SerializedObject(dragger);
-            WriteFloat(dragSo, "holdTime", 0.12f);
+            // 0 = 按下即抓（2026-09-29 从 0.12 改）。盘子没有第二个鼠标手势要分流，
+            // 0.12s 的等待纯粹是白等。**这个值必须与 PlateDragger 的字段默认值一致** ——
+            // 否则复跑一次菜单就把「按下即抓」改回 0.12s（菜单幂等铁律）。
+            WriteFloat(dragSo, "holdTime", 0f);
             WriteFloat(dragSo, "moveTolerance", 0.45f);
             WriteFloat(dragSo, "followLerp", 26f);
             WriteFloat(dragSo, "liftScale", 1.06f);
@@ -76,6 +79,10 @@ public static class PlateFlyInSetup
             SerializedProperty dragFly = dragSo.FindProperty("flyIn");
             if (dragFly != null) dragFly.objectReferenceValue = flyIn;
             dragSo.ApplyModifiedPropertiesWithoutUndo();
+
+            // 擦干净后的退场：先缩小再销毁（2026-09-29）。参数用组件自己的默认值
+            // （0.3s / 线性 / 缩到 5%，与 AutoScratcher 出槽一致），这里只保证组件在位。
+            if (root.GetComponent<ShrinkOut>() == null) root.AddComponent<ShrinkOut>();
 
             PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
         }

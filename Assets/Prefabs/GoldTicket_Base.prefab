@@ -14,6 +14,8 @@ GameObject:
   - component: {fileID: 496265217109620433}
   - component: {fileID: 5299516649896128035}
   - component: {fileID: 2593269297179557178}
+  - component: {fileID: 2952767602069107659}
+  - component: {fileID: 2661801483128940782}
   m_Layer: 0
   m_Name: GoldTicket_Base
   m_TagString: Untagged
@@ -111,8 +113,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LotteryTicket
   kind: 1
-  prizes: 64000000c8000000f4010000
+  prizes: 0000000000000000190000001900000032000000320000004b00000064000000
   prizeText: {fileID: 7717952783577220988}
+  numberTexts: []
 --- !u!114 &496265217109620433
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -125,13 +128,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91c6bf39a2ff049cb9ade3a686bce4f4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TicketFlyIn
-  flightTime: 0.52
+  flightTime: 0.25
   spawnViewportMargin: 0.12
   arcHeight: 6
   stretchGain: 0.085
   maxStretch: 0.15
   squashRatio: 0.65
-  settleTime: 0.5
+  settleTime: 0.15
   landingSquash: 0.15
   bounceHeight: 1.6
   reducedTimeScale: 0.45
@@ -148,16 +151,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a858bf85520ab4e718c1afe69801d643, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TicketDragger
-  holdTime: 0.12
+  holdTime: 0
   moveTolerance: 0.45
-  followLerp: 26
   liftScale: 1.06
   dropHintScale: 0.75
   hintLerp: 14
   dragSortingBoost: 12
-  returnTime: 0.26
   inputCamera: {fileID: 0}
   jelly: {fileID: 2593269297179557178}
+  inertia: {fileID: 0}
 --- !u!114 &2593269297179557178
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -183,6 +185,38 @@ MonoBehaviour:
   pressPulse: 1
   pressPulseStrength: 1.8
   pressPulseDuration: 0.1
+--- !u!114 &2952767602069107659
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 92131731240837190}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 14a8cb1dd4be742908952efecfc5cf59, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DragInertia
+  speedSmoothing: 0.045
+  maxSpeed: 90
+  deceleration: 320
+  stopSpeed: 0.8
+  bounce: 0.4
+  reducedDecelFactor: 3
+--- !u!114 &2661801483128940782
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 92131731240837190}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 297fbda101b374a4ba079a29e29882d7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ShrinkOut
+  duration: 0.15
+  endScale: 0.05
 --- !u!1 &549329266618939383
 GameObject:
   m_ObjectHideFlags: 0

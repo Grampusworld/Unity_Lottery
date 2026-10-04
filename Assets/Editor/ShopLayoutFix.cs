@@ -71,11 +71,13 @@ namespace Lottery.EditorTools
 
         static readonly string[] TicketButtons =
         {
-            "LuckyTicketButton", "GoldTicketButton", "NovaTicketButton"
+            "LuckyTicketButton", "GoldTicketButton", "NovaTicketButton",
+            "HeartMatchTicketButton", "CrossCodeTicketButton", "ZigzagRunTicketButton"
         };
 
         static readonly string[] GadgetButtons =
         {
+            "MultiplePlatesButton",
             "PurpleSpongeButton", "WasherUnlockButton", "SpeedUpgradeButton", "CapacityUpgradeButton",
             "ScratcherUnlockButton", "ScratcherSpeedButton", "ScratcherCapacityButton"
         };
@@ -173,13 +175,16 @@ namespace Lottery.EditorTools
                 return;
             }
 
-            RectTransform panelRect = panel as RectTransform;
-            float panelWidth = panelRect != null ? panelRect.sizeDelta.x : 0f;
             float pitch = height + Gap;
+            PixelRowScroll scroll = panel.GetComponent<PixelRowScroll>();
+            if (scroll != null && firstYIsCentre) firstY -= 10f;
 
             for (int i = 0; i < buttonNames.Length; i++)
             {
-                Transform button = panel.Find(buttonNames[i]);
+                // Rows may sit directly under the panel (tickets) or under a scrolling
+                // Content child (gadgets, since the panel became a scroll viewport).
+                // Search the whole subtree so this menu keeps working either way.
+                Transform button = FindDeep(panel, buttonNames[i]);
                 if (button == null)
                 {
                     Debug.LogWarning("[ShopLayoutFix] '" + buttonNames[i] + "' not found under " + panelName);
@@ -198,11 +203,28 @@ namespace Lottery.EditorTools
                         ? firstY - i * pitch            // the first centre is given directly
                         : firstY - height * 0.5f - i * pitch; // the first top edge is given
 
-                    rect.anchoredPosition = new Vector2(panelWidth * 0.5f, y);
+                    // Centre on the button's OWN parent, not on the panel.
+                    // The gadget rows now live inside a 590-wide Content that sits in a
+                    // 620-wide viewport; using the panel width would push them 15px right.
+                    RectTransform parentRect = rect.parent as RectTransform;
+                    float parentWidth = parentRect != null
+                        ? parentRect.rect.width
+                        : (panel as RectTransform != null ? ((RectTransform)panel).sizeDelta.x : 0f);
+                    rect.anchoredPosition = new Vector2(parentWidth * 0.5f, y);
                 }
 
                 EnsureBorder(button);
             }
+        }
+
+        static Transform FindDeep(Transform root, string name)
+        {
+            Transform[] all = root.GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < all.Length; i++)
+            {
+                if (all[i].name == name) return all[i];
+            }
+            return null;
         }
 
         static void EnsureBorder(Transform button)

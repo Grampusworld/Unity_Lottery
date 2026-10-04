@@ -19,6 +19,7 @@ public class WasherPlateFeeder : MonoBehaviour
     [SerializeField] private SpriteRenderer washerRenderer;
     [SerializeField] private HoverJelly washerJelly;
     [SerializeField] private Transform plateContainer;
+    [SerializeField] private WasherWaterEffect window;
 
     [Header("Plate")]
     [SerializeField] private Sprite plateSprite;
@@ -48,9 +49,6 @@ public class WasherPlateFeeder : MonoBehaviour
     [SerializeField] private float columnSpacing = 7.6f;
     [Tooltip("每叠一层的垂直错位上限，实际值会自动收敛到不超出机内高度。")]
     [SerializeField] private float stackOffset = 0.8f;
-    [SerializeField] private Vector2 interiorOffset = new Vector2(0f, -1f);
-    [SerializeField, Range(0.2f, 1f)] private float interiorWidthRatio = 0.85f;
-    [SerializeField, Range(0.2f, 1f)] private float interiorHeightRatio = 0.7f;
 
     [Header("Jelly Pulse")]
     [SerializeField] private float pulseStrength = 1f;
@@ -61,14 +59,21 @@ public class WasherPlateFeeder : MonoBehaviour
     [SerializeField, Min(0.02f)] private float minPulseDuration = 0.06f;
     [SerializeField, Min(0.05f)] private float maxPulseDuration = 0.22f;
 
-    private readonly List<Transform> plates = new List<Transform>();
+    // 必须 [SerializeField]（且不能 readonly）：Play 中域重载（改脚本触发自动刷新）会
+    // 重序列化场景状态，非序列化字段全部清空 —— 旧版 readonly 追踪表丢失后，盘子本体
+    // 还活着但无人刷新，变成「被 mask 藏住、机身拖回来才显形」的静止孤儿层
+    // （2026-10-04 实锤：9 在册 + 9 孤儿，孤儿批钉在重载那一刻的机身位置）。
+    [SerializeField] private List<Transform> plates = new List<Transform>();
     // 正在飞入的盘子。机身被拖动时 RefreshSlotPositions 必须跳过它们 ——
     // FlyIn 协程每帧在写 position，两边都写就是两个源抢同一个属性。
+    // 不序列化（HashSet 不可序列化）：域重载后清空是可接受的 —— 协程也死了，
+    // 活着的盘子会由 RefreshSlotPositions 直接吸附到槽位。
     private readonly HashSet<Transform> inFlight = new HashSet<Transform>();
     private Coroutine feedRoutine;
     private int slotCursor;
-    private Vector3 baseLossyScale = Vector3.one;
-    private bool metricsReady;
+    private SpriteMask windowMask;
+    private Sprite maskSprite;
+    private Vector3 lastWindowScale;
 
     public bool IsFeeding => feedRoutine != null;
     public int PlateCount => plates.Count;
@@ -76,7 +81,9 @@ public class WasherPlateFeeder : MonoBehaviour
     private void Awake()
     {
         if (washerRenderer == null) washerRenderer = GetComponent<SpriteRenderer>();
-        EnsureMetrics();
+        if (window == null) window = GetComponentInChildren<WasherWaterEffect>(true);
+        BuildWindowMask();
+        lastWindowScale = washerRenderer != null ? washerRenderer.transform.lossyScale : Vector3.one;
         if (plateContainer == null)
         {
             // 盘子不能挂在洗盘机下面：洗盘机 localScale=24，会把盘子一起放大；
@@ -88,24 +95,63 @@ public class WasherPlateFeeder : MonoBehaviour
         }
     }
 
-    private void OnDestroy() => ClearPlates();
-
-    // 洗盘机的静止尺寸只取一次，且必须避开果冻缩放（否则槽位会跟着抖）。
-    // 惰性取样而不是只在 Awake 里取：Awake 的时机在编辑器里不可靠，
-    // 实测过拿到 (1,1,1) 导致机内尺寸算小 20 倍、列距被收敛到下限。
-    private void EnsureMetrics()
+    private void OnDestroy()
     {
-        if (metricsReady || washerRenderer == null) return;
-        baseLossyScale = washerRenderer.transform.lossyScale;
-        metricsReady = true;
+        ClearPlates();
+        if (maskSprite != null) Destroy(maskSprite);
     }
 
-    // 改了洗盘机大小后调一次，重新取样（运行时可在 Inspector 之外手动触发）。
-    public void RefreshMetrics()
+    // 自愈兜底：容器里「活着但不在追踪表」的盘子一律收编。
+    // 域重载（Awake 不会重跑，OnEnable 会重跑）或任何未来泄漏路径留下的孤儿，
+    // 在这一帧重新进入槽位布局并按当前机身位置重排 —— 而不是变成隐形静止层。
+    // 编辑态必须跳过：收编属于运行时状态逻辑，烘进场景就是第二个 2026-10-01。
+    private void OnEnable()
     {
-        metricsReady = false;
-        EnsureMetrics();
+        if (!Application.isPlaying || plateContainer == null) return;
+        bool adopted = false;
+        for (int i = plateContainer.childCount - 1; i >= 0; i--)
+        {
+            Transform child = plateContainer.GetChild(i);
+            if (child == null || plates.Contains(child)) continue;
+            plates.Add(child);
+            adopted = true;
+        }
+        if (adopted) RefreshSlotPositions();
     }
+
+    private void LateUpdate()
+    {
+        if (washerRenderer == null || washerRenderer.transform.lossyScale == lastWindowScale) return;
+        lastWindowScale = washerRenderer.transform.lossyScale;
+        RefreshSlotPositions();
+    }
+
+    private Bounds WindowLocalBounds => window != null ? window.WindowLocalBounds
+        : new Bounds(new Vector3(-0.005f, 0.005f, 0f), new Vector3(0.9f, 0.34f, 0f));
+
+    private void BuildWindowMask()
+    {
+        if (washerRenderer == null) return;
+        var go = new GameObject("WasherWindowMask");
+        go.transform.SetParent(washerRenderer.transform, false);
+        Bounds bounds = WindowLocalBounds;
+        go.transform.localPosition = bounds.center;
+        go.transform.localScale = new Vector3(bounds.size.x, bounds.size.y, 1f);
+        maskSprite = Sprite.Create(Texture2D.whiteTexture, new Rect(0f, 0f, 2f, 2f),
+            new Vector2(0.5f, 0.5f), 2f, 0, SpriteMeshType.FullRect);
+        maskSprite.hideFlags = HideFlags.DontSave;
+        windowMask = go.AddComponent<SpriteMask>();
+        windowMask.sprite = maskSprite;
+        windowMask.isCustomRangeActive = true;
+        windowMask.frontSortingLayerID = windowMask.backSortingLayerID = washerRenderer.sortingLayerID;
+        // 前后顺序必须严格包住盘子层；与 front 同层会在 URP 2D 中完全隐藏盘子。
+        int plateOrder = washerRenderer.sortingOrder + plateSortingOffset;
+        windowMask.frontSortingOrder = plateOrder + 1;
+        windowMask.backSortingOrder = plateOrder - 1;
+    }
+
+    // 编辑器装配后可显式刷新；窗几何跟随机身真实缩放，不缓存旧尺寸。
+    public void RefreshMetrics() => RefreshSlotPositions();
 
     // ---- 对外接口 ----------------------------------------------------------
 
@@ -150,6 +196,7 @@ public class WasherPlateFeeder : MonoBehaviour
         {
             Transform plate = CreatePlate();
             plate.position = SlotPosition(i, Mathf.Max(1, count));
+            plate.GetComponent<SpriteRenderer>().maskInteraction = SpriteMaskInteraction.VisibleInsideMask;
             plates.Add(plate);
         }
         slotCursor = plates.Count;
@@ -182,6 +229,31 @@ public class WasherPlateFeeder : MonoBehaviour
         slotCursor = 0;
     }
 
+    // 洗完那一刻：把机内**当前这一批**交给缩小退场，随后飞入的新一批与它共存 0.3s。
+    //
+    // 刻意**不复用 ClearPlates()**：那条路还被另外三个调用点共用 ——
+    // 场景卸载（本组件的 OnDestroy）、读档（PlaceInstantly，注释明写「不播动画」）、
+    // 锁定重置（AutomaticDishWasher 的 Locked 分支）。其中卸载时对象正在销毁，
+    // 动画根本跑不完；读档则是明确要求不播。所以退场动画只能接在「洗完」这一个点上。
+    public void ShrinkOutPlates()
+    {
+        StopFeed();
+        inFlight.Clear();
+        for (int i = 0; i < plates.Count; i++)
+        {
+            Transform plate = plates[i];
+            if (plate == null) continue;
+            ShrinkOut shrink = plate.GetComponent<ShrinkOut>();
+            if (shrink == null) shrink = plate.gameObject.AddComponent<ShrinkOut>();
+            // 脱离容器再看：它已经不属于槽位布局，也不该被随后的 ClearPlates /
+            // RefreshSlotPositions 牵连。保留世界坐标，所以观感是原地缩小而不是瞬移。
+            plate.SetParent(null, true);
+            shrink.Play();
+        }
+        plates.Clear();
+        slotCursor = 0;
+    }
+
     // 机身位置被拖动/滑行改动时每帧调用：机内已就位的盘子必须重摆到新槽位。
     // 飞行中的盘子不在这里改 —— FlyIn 每帧自己重算目标（见 FlyIn 里的注释）。
     public void RefreshSlotPositions()
@@ -192,6 +264,7 @@ public class WasherPlateFeeder : MonoBehaviour
         {
             Transform plate = plates[i];
             if (plate == null || inFlight.Contains(plate)) continue;
+            plate.localScale = new Vector3(VisualPlateScale, VisualPlateScale, 1f);
             plate.position = SlotPosition(i, total);
         }
     }
@@ -271,6 +344,14 @@ public class WasherPlateFeeder : MonoBehaviour
                 inFlight.Remove(plate);
                 yield break;
             }
+            // 已被 ShrinkOutPlates 接管退场（SetParent(null)）：立刻让位。
+            // 缩小那 0.3s 里 scale 归 ShrinkOut 独占，这里再写 position/scale/mask
+            // 就是同帧两个源抢同一属性（铁律）。
+            if (plate.parent == null)
+            {
+                inFlight.Remove(plate);
+                yield break;
+            }
             time += Time.deltaTime;
             float k = Mathf.Clamp01(time / duration);
             float ease = 1f - Mathf.Pow(1f - k, 3f); // easeOutCubic：出发快、到位稳
@@ -280,11 +361,19 @@ public class WasherPlateFeeder : MonoBehaviour
             float x = Mathf.Lerp(start.x, target.x, ease);
             float y = Mathf.Lerp(start.y, target.y, ease) + Mathf.Sin(k * Mathf.PI) * arcHeight;
             plate.position = new Vector3(x, y, target.z);
+            plate.localScale = new Vector3(VisualPlateScale, VisualPlateScale, 1f);
+            SpriteRenderer plateRenderer = plate.GetComponent<SpriteRenderer>();
+            Bounds outer = washerRenderer.bounds;
+            Bounds flying = plateRenderer.bounds;
+            bool touchesMachine = flying.max.x >= outer.min.x && flying.min.x <= outer.max.x
+                && flying.max.y >= outer.min.y && flying.min.y <= outer.max.y;
+            plateRenderer.maskInteraction = touchesMachine ? SpriteMaskInteraction.VisibleInsideMask : SpriteMaskInteraction.None;
             yield return null;
         }
 
         inFlight.Remove(plate);
         plate.position = SlotPosition(index, total);
+        plate.GetComponent<SpriteRenderer>().maskInteraction = SpriteMaskInteraction.VisibleInsideMask;
         // 果冻与「盘子到位」精确同步：在这一帧打脉冲。
         if (washerJelly != null) washerJelly.Pulse(strength, pulseDuration);
     }
@@ -293,7 +382,7 @@ public class WasherPlateFeeder : MonoBehaviour
     {
         var go = new GameObject("Plate");
         go.transform.SetParent(plateContainer, false);
-        go.transform.localScale = new Vector3(plateScale, plateScale, 1f);
+        go.transform.localScale = new Vector3(VisualPlateScale, VisualPlateScale, 1f);
         var renderer = go.AddComponent<SpriteRenderer>();
         renderer.sprite = plateSprite;
         renderer.sortingLayerID = washerRenderer.sortingLayerID;
@@ -315,10 +404,10 @@ public class WasherPlateFeeder : MonoBehaviour
 
         // 列距 / 层距都自动收敛，保证盘子再多也不溢出机内。
         float spacing = cols > 1
-            ? Mathf.Min(columnSpacing, Mathf.Max(0.1f, (size.x - plateSize.x) / (cols - 1)))
+            ? Mathf.Min(columnSpacing, Mathf.Max(0f, (size.x - plateSize.x) / (cols - 1)))
             : 0f;
         float step = rows > 1
-            ? Mathf.Min(stackOffset, Mathf.Max(0.05f, (size.y - plateSize.y) / (rows - 1)))
+            ? Mathf.Min(stackOffset, Mathf.Max(0f, (size.y - plateSize.y) / (rows - 1)))
             : 0f;
 
         float stackHeight = plateSize.y + (rows - 1) * step;
@@ -328,30 +417,35 @@ public class WasherPlateFeeder : MonoBehaviour
     }
 
     private Vector2 plateSize =>
-        new Vector2(plateSprite.bounds.size.x * plateScale, plateSprite.bounds.size.y * plateScale);
+        new Vector2(plateSprite.bounds.size.x * VisualPlateScale, plateSprite.bounds.size.y * VisualPlateScale);
+
+    private float VisualPlateScale
+    {
+        get
+        {
+            if (plateSprite == null) return plateScale;
+            Vector3 size = InteriorSize();
+            return Mathf.Min(plateScale, size.y / Mathf.Max(0.001f, plateSprite.bounds.size.y),
+                size.x / (Mathf.Max(1, columns) * Mathf.Max(0.001f, plateSprite.bounds.size.x)));
+        }
+    }
 
     private Vector3 InteriorSize()
     {
-        EnsureMetrics();
-        Vector3 local = washerRenderer.sprite.bounds.size;
-        Vector3 world = Vector3.Scale(local, baseLossyScale);
-        return new Vector3(world.x * interiorWidthRatio, world.y * interiorHeightRatio, world.z);
+        Vector3 local = WindowLocalBounds.size;
+        // 在实际窗内保留一圈机身 texel，完整圆盘和叠层都不能盖到外壳。
+        local.x = Mathf.Max(0.001f, local.x - 0.02f);
+        local.y = Mathf.Max(0.001f, local.y - 0.02f);
+        return Vector3.Scale(local, washerRenderer.transform.lossyScale);
     }
 
     private Vector3 InteriorCenter()
     {
-        EnsureMetrics();
-        Vector3 local = washerRenderer.sprite.bounds.center;
-        Vector3 offset = Vector3.Scale(local, baseLossyScale);
-        Vector3 center = washerRenderer.transform.position + offset;
-        center.x += interiorOffset.x;
-        center.y += interiorOffset.y;
-        return center;
+        return washerRenderer.transform.TransformPoint(WindowLocalBounds.center);
     }
 
     private float SpawnX()
     {
-        EnsureMetrics();
         Camera cam = Camera.main;
         if (cam == null) return InteriorCenter().x + 40f;
         float halfWidth = cam.orthographicSize * cam.aspect;
