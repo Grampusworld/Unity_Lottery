@@ -18,7 +18,7 @@
 
 以下片段全部来自本仓库当前版本的实际运行画面，没有概念图或手绘素材。
 
-<video src="https://github.com/Grampusworld/Unity_Lottery/raw/main/Docs/TrailerPlan/Production/LotteryMania_29s_1080p60.mp4" controls preload="metadata" width="720" style="max-width:100%;height:auto"></video>
+<video src="https://github.com/Grampusworld/Unity_Lottery/raw/main/Docs/TrailerPlan/Production/LotteryMania_29s_1080p60.mp4" poster="Docs/TrailerPlan/Production/contact-sheet.jpg" controls preload="metadata" width="720" style="max-width:100%;height:auto"></video>
 
 [在 GitHub 上直接播放](https://github.com/Grampusworld/Unity_Lottery/raw/main/Docs/TrailerPlan/Production/LotteryMania_29s_1080p60.mp4) · [下载 MP4（1920×1080 · 60fps · 29s · 29MB）](https://github.com/Grampusworld/Unity_Lottery/raw/main/Docs/TrailerPlan/Production/LotteryMania_29s_1080p60.mp4)
 
