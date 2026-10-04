@@ -1,0 +1,90 @@
+[
+  {
+    "time": 0.0,
+    "clip": "scratch_003"
+  },
+  {
+    "time": 2.9,
+    "clip": "confirmation_003"
+  },
+  {
+    "time": 8.75,
+    "clip": "drop_002"
+  },
+  {
+    "time": 9.53333,
+    "clip": "confirmation_003"
+  },
+  {
+    "time": 9.85,
+    "clip": "drop_001"
+  },
+  {
+    "time": 10.5,
+    "clip": "scratch_003"
+  },
+  {
+    "time": 11.01852,
+    "clip": "confirmation_003"
+  },
+  {
+    "time": 11.16667,
+    "clip": "scratch_003"
+  },
+  {
+    "time": 11.68519,
+    "clip": "confirmation_003"
+  },
+  {
+    "time": 11.83333,
+    "clip": "scratch_003"
+  },
+  {
+    "time": 12.35185,
+    "clip": "confirmation_003"
+  },
+  {
+    "time": 12.50926,
+    "clip": "scratch_003"
+  },
+  {
+    "time": 13.00926,
+    "clip": "confirmation_003"
+  },
+  {
+    "time": 13.17593,
+    "clip": "scratch_003"
+  },
+  {
+    "time": 13.83333,
+    "clip": "scratch_003"
+  },
+  {
+    "time": 14.6,
+    "clip": "tick_002"
+  },
+  {
+    "time": 15.15,
+    "clip": "select_005"
+  },
+  {
+    "time": 15.85,
+    "clip": "drop_002"
+  },
+  {
+    "time": 17.75,
+    "clip": "pluck_002"
+  },
+  {
+    "time": 20.16667,
+    "clip": "confirmation_003"
+  },
+  {
+    "time": 23.05714,
+    "clip": "confirmation_003"
+  },
+  {
+    "time": 26.51667,
+    "clip": "drop_003"
+  }
+]

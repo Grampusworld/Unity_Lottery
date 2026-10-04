@@ -14,6 +14,16 @@
 
 > 当前仓库提供 Unity 项目源码，按下文步骤即可在编辑器里试玩。游戏界面与新手引导为英文。
 
+## 29 秒实机宣传片
+
+以下片段全部来自本仓库当前版本的实际运行画面，没有概念图或手绘素材。
+
+<video src="https://github.com/Grampusworld/Unity_Lottery/raw/main/Docs/TrailerPlan/Production/LotteryMania_29s_1080p60.mp4" controls preload="metadata" width="720" style="max-width:100%;height:auto"></video>
+
+[在 GitHub 上直接播放](https://github.com/Grampusworld/Unity_Lottery/raw/main/Docs/TrailerPlan/Production/LotteryMania_29s_1080p60.mp4) · [下载 MP4（1920×1080 · 60fps · 29s · 29MB）](https://github.com/Grampusworld/Unity_Lottery/raw/main/Docs/TrailerPlan/Production/LotteryMania_29s_1080p60.mp4)
+
+分镜方案见 [宣传片方案](Docs/TrailerPlan/LotteryMania_Trailer_29s.md)，录制与剪辑说明见 [Production/README](Docs/TrailerPlan/Production/README.md)。
+
 ## 从洗碗工，到猫粮赞助商
 
 ### 第一桶金，真的要用海绵擦
@@ -134,7 +144,7 @@ Assets/
   Scripts/        玩法、经济、交互、UI 与动效
 Packages/         软件包依赖
 ProjectSettings/  Unity 项目配置
-Tools/            经济模拟与校准脚本
+Tools/            经济模拟、校准与宣传片剪辑脚本
 Docs/             功能与设计说明
 ```
 

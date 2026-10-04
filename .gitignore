@@ -31,3 +31,16 @@ mono_crash.*
 
 # 本地一次性快照目录（经济改版前的脚本/场景备份），不进仓库
 .bak_*/
+
+# 宣传片制作中间产物：原始实机帧序列与逐段剪辑缓存合计约 281MB，
+# 完全可以由 Tools/TrailerProduction/render_trailer.py 从 raw/ 重新生成。
+# 成片 LotteryMania_29s_1080p60.mp4 与可复现所需的 manifest 会入库，中间产物不入。
+/Docs/TrailerPlan/Production/raw/
+/Docs/TrailerPlan/Production/edit-cache/
+/Docs/TrailerPlan/Production/verification/
+/Docs/TrailerPlan/Production/test-opening.png
+
+# 宣传片逐帧核对用的一次性静帧（内容与 verification/ 重复）
+/Docs/TrailerPlan/Production/*-details.jpg
+/Docs/TrailerPlan/Production/takes-contact.jpg
+/Docs/TrailerPlan/Production/hook-contact.jpg

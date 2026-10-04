@@ -1,0 +1,540 @@
+{
+  "title": "LOTTERY MANIA | 29-second gameplay trailer",
+  "fps": 60,
+  "resolution": [
+    1920,
+    1080
+  ],
+  "output": "LotteryMania_29s_1080p60.mp4",
+  "audio": {
+    "music": "../../../Assets/Resources/Music/happy_adveture.mp3",
+    "music_start": 0,
+    "sfx_folder": "/Users/maolinlu/Unity Projects/My project (2D)/Assets/Materials/Audios"
+  },
+  "shots": [
+    {
+      "label": "开场：刮奖与中奖",
+      "duration": 4,
+      "caption": "下一张，会是什么？",
+      "parts": [
+        {
+          "label": "Scratch macro",
+          "duration": 2.9,
+          "source": {
+            "pattern": "raw/hook/%05d.png",
+            "fps": 60,
+            "start_time": 0,
+            "duration": 1.8
+          },
+          "camera": {
+            "keyframes": [
+              {
+                "t": 0,
+                "zoom": 2.05,
+                "cx": 0.674,
+                "cy": 0.34
+              },
+              {
+                "t": 2.9,
+                "zoom": 2.25,
+                "cx": 0.674,
+                "cy": 0.34
+              }
+            ]
+          }
+        },
+        {
+          "label": "Real win burst and balance",
+          "duration": 1.1,
+          "source": {
+            "pattern": "raw/hook/%05d.png",
+            "fps": 60,
+            "start_time": 1.8,
+            "duration": 0.42
+          },
+          "camera": {
+            "keyframes": [
+              {
+                "t": 0,
+                "zoom": 2.25,
+                "cx": 0.674,
+                "cy": 0.34
+              },
+              {
+                "t": 0.42,
+                "zoom": 2.25,
+                "cx": 0.674,
+                "cy": 0.34
+              },
+              {
+                "t": 1.1,
+                "zoom": 1.055,
+                "cx": 0.5,
+                "cy": 0.47
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "label": "Cat investor",
+      "duration": 3,
+      "source": {
+        "pattern": "raw/cat/%05d.png",
+        "fps": 60,
+        "start_time": 0,
+        "duration": 3
+      },
+      "camera": {
+        "keyframes": [
+          {
+            "t": 0,
+            "zoom": 1.14,
+            "cx": 0.5,
+            "cy": 0.49
+          },
+          {
+            "t": 3,
+            "zoom": 1.2,
+            "cx": 0.5,
+            "cy": 0.49
+          }
+        ]
+      },
+      "caption": "猫粮预算：$2,000,000。"
+    },
+    {
+      "label": "海绵清洁",
+      "duration": 3.5,
+      "caption": "先洗一只盘子。",
+      "parts": [
+        {
+          "label": "Yellow sponge",
+          "duration": 1.75,
+          "source": {
+            "pattern": "raw/scrub_yellow/%05d.png",
+            "fps": 60,
+            "start_time": 0.45,
+            "duration": 3.5
+          },
+          "camera": {
+            "keyframes": [
+              {
+                "t": 0,
+                "zoom": 2.45,
+                "cx": 0.5,
+                "cy": 0.65
+              },
+              {
+                "t": 1.75,
+                "zoom": 2.6,
+                "cx": 0.5,
+                "cy": 0.65
+              }
+            ]
+          }
+        },
+        {
+          "label": "Purple sponge one wipe",
+          "duration": 1.75,
+          "source": {
+            "pattern": "raw/scrub_purple/%05d.png",
+            "fps": 60,
+            "start_time": 0,
+            "duration": 1.75
+          },
+          "camera": {
+            "keyframes": [
+              {
+                "t": 0,
+                "zoom": 2.35,
+                "cx": 0.435,
+                "cy": 0.71
+              },
+              {
+                "t": 1.75,
+                "zoom": 2.5,
+                "cx": 0.36,
+                "cy": 0.7
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "label": "六种彩票",
+      "duration": 4,
+      "caption": "六种彩票，六种期待。",
+      "parts": [
+        {
+          "label": "Ticket 0",
+          "duration": 0.6666666666666666,
+          "source": {
+            "pattern": "raw/ticket_0/%05d.png",
+            "fps": 60,
+            "start_time": 0,
+            "duration": 1.2
+          },
+          "camera": {
+            "keyframes": [
+              {
+                "t": 0,
+                "zoom": 2.13,
+                "cx": 0.674,
+                "cy": 0.355
+              },
+              {
+                "t": 0.6666666666666666,
+                "zoom": 2.25,
+                "cx": 0.674,
+                "cy": 0.355
+              }
+            ]
+          }
+        },
+        {
+          "label": "Ticket 1",
+          "duration": 0.6666666666666666,
+          "source": {
+            "pattern": "raw/ticket_1/%05d.png",
+            "fps": 60,
+            "start_time": 0,
+            "duration": 1.2
+          },
+          "camera": {
+            "keyframes": [
+              {
+                "t": 0,
+                "zoom": 2.13,
+                "cx": 0.674,
+                "cy": 0.355
+              },
+              {
+                "t": 0.6666666666666666,
+                "zoom": 2.25,
+                "cx": 0.674,
+                "cy": 0.355
+              }
+            ]
+          }
+        },
+        {
+          "label": "Ticket 2",
+          "duration": 0.6666666666666666,
+          "source": {
+            "pattern": "raw/ticket_2/%05d.png",
+            "fps": 60,
+            "start_time": 0,
+            "duration": 1.2
+          },
+          "camera": {
+            "keyframes": [
+              {
+                "t": 0,
+                "zoom": 2.13,
+                "cx": 0.674,
+                "cy": 0.355
+              },
+              {
+                "t": 0.6666666666666666,
+                "zoom": 2.25,
+                "cx": 0.674,
+                "cy": 0.355
+              }
+            ]
+          }
+        },
+        {
+          "label": "Ticket 3",
+          "duration": 0.6666666666666666,
+          "source": {
+            "pattern": "raw/ticket_3/%05d.png",
+            "fps": 60,
+            "start_time": 0,
+            "duration": 1.2
+          },
+          "camera": {
+            "keyframes": [
+              {
+                "t": 0,
+                "zoom": 2.13,
+                "cx": 0.674,
+                "cy": 0.355
+              },
+              {
+                "t": 0.6666666666666666,
+                "zoom": 2.25,
+                "cx": 0.674,
+                "cy": 0.355
+              }
+            ]
+          }
+        },
+        {
+          "label": "Ticket 4",
+          "duration": 0.6666666666666666,
+          "source": {
+            "pattern": "raw/ticket_4/%05d.png",
+            "fps": 60,
+            "start_time": 0,
+            "duration": 1.2
+          },
+          "camera": {
+            "keyframes": [
+              {
+                "t": 0,
+                "zoom": 2.13,
+                "cx": 0.674,
+                "cy": 0.355
+              },
+              {
+                "t": 0.6666666666666666,
+                "zoom": 2.25,
+                "cx": 0.674,
+                "cy": 0.355
+              }
+            ]
+          }
+        },
+        {
+          "label": "Ticket 5",
+          "duration": 0.6666666666666666,
+          "source": {
+            "pattern": "raw/ticket_5/%05d.png",
+            "fps": 60,
+            "start_time": 0,
+            "duration": 1.2
+          },
+          "camera": {
+            "keyframes": [
+              {
+                "t": 0,
+                "zoom": 2.13,
+                "cx": 0.674,
+                "cy": 0.355
+              },
+              {
+                "t": 0.6666666666666666,
+                "zoom": 2.25,
+                "cx": 0.674,
+                "cy": 0.355
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "label": "升级与投料",
+      "duration": 4,
+      "caption": "升级，让机器接班。",
+      "parts": [
+        {
+          "label": "Upgrade shop",
+          "duration": 1.25,
+          "source": {
+            "pattern": "raw/upgrade/%05d.png",
+            "fps": 60,
+            "start_time": 0,
+            "duration": 1.25
+          },
+          "camera": {
+            "keyframes": [
+              {
+                "t": 0,
+                "zoom": 1.05,
+                "cx": 0.5,
+                "cy": 0.471
+              },
+              {
+                "t": 1.25,
+                "zoom": 1.07,
+                "cx": 0.48,
+                "cy": 0.468
+              }
+            ]
+          }
+        },
+        {
+          "label": "Drag to real scratcher",
+          "duration": 2.75,
+          "source": {
+            "pattern": "raw/upgrade/%05d.png",
+            "fps": 60,
+            "start_time": 1.25,
+            "duration": 2.75
+          },
+          "camera": {
+            "keyframes": [
+              {
+                "t": 0,
+                "zoom": 1.45,
+                "cx": 0.674,
+                "cy": 0.36
+              },
+              {
+                "t": 1.75,
+                "zoom": 1.85,
+                "cx": 0.655,
+                "cy": 0.69
+              },
+              {
+                "t": 2.75,
+                "zoom": 2.1,
+                "cx": 0.65,
+                "cy": 0.68
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "label": "Both machines in action",
+      "duration": 3.5,
+      "source": {
+        "pattern": "raw/machines/%05d.png",
+        "fps": 60,
+        "start_time": 1.5,
+        "duration": 3.5
+      },
+      "camera": {
+        "keyframes": [
+          {
+            "t": 0,
+            "zoom": 2.15,
+            "cx": 0.65,
+            "cy": 0.71
+          },
+          {
+            "t": 3.5,
+            "zoom": 2.25,
+            "cx": 0.66,
+            "cy": 0.71
+          }
+        ]
+      },
+      "caption": ""
+    },
+    {
+      "label": "里程碑",
+      "duration": 3,
+      "caption": "为猫老板，再赚一点。",
+      "parts": [
+        {
+          "label": "Tenth ticket",
+          "duration": 0.9,
+          "source": {
+            "pattern": "raw/milestone/%05d.png",
+            "fps": 60,
+            "start_time": 0.5,
+            "duration": 0.55
+          },
+          "camera": {
+            "keyframes": [
+              {
+                "t": 0,
+                "zoom": 1.75,
+                "cx": 0.674,
+                "cy": 0.32
+              },
+              {
+                "t": 0.9,
+                "zoom": 2,
+                "cx": 0.674,
+                "cy": 0.3
+              }
+            ]
+          }
+        },
+        {
+          "label": "Actual multiplier popup slow motion",
+          "duration": 1.1,
+          "source": {
+            "pattern": "raw/milestone/%05d.png",
+            "fps": 60,
+            "start_time": 1.05,
+            "duration": 0.11666666666666667
+          },
+          "camera": {
+            "keyframes": [
+              {
+                "t": 0,
+                "zoom": 2,
+                "cx": 0.674,
+                "cy": 0.29
+              },
+              {
+                "t": 1.1,
+                "zoom": 2,
+                "cx": 0.69,
+                "cy": 0.285
+              }
+            ]
+          }
+        },
+        {
+          "label": "Goal and multiplier UI",
+          "duration": 1,
+          "source": {
+            "pattern": "raw/milestone/%05d.png",
+            "fps": 60,
+            "start_time": 1.1666666666666667,
+            "duration": 0.38
+          },
+          "camera": {
+            "keyframes": [
+              {
+                "t": 0,
+                "zoom": 1.35,
+                "cx": 0.62,
+                "cy": 0.4
+              },
+              {
+                "t": 1,
+                "zoom": 1.055,
+                "cx": 0.5,
+                "cy": 0.47
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "label": "Original main menu",
+      "duration": 4,
+      "source": {
+        "pattern": "raw/menu/%05d.png",
+        "fps": 60,
+        "start_time": 0,
+        "duration": 4
+      },
+      "camera": {
+        "keyframes": [
+          {
+            "t": 0,
+            "zoom": 1.025,
+            "cx": 0.5,
+            "cy": 0.5
+          },
+          {
+            "t": 1.65,
+            "zoom": 1,
+            "cx": 0.5,
+            "cy": 0.5
+          },
+          {
+            "t": 4,
+            "zoom": 1,
+            "cx": 0.5,
+            "cy": 0.5
+          }
+        ]
+      },
+      "caption": ""
+    }
+  ]
+}

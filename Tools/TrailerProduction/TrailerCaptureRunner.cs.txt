@@ -1,0 +1,245 @@
+// Temporary filming helper. Never saves a scene, asset, settings, or PlayerPrefs.
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
+using UnityEngine.UI;
+
+public class TrailerCaptureRunner : MonoBehaviour
+{
+    const int Fps = 60;
+    static readonly BindingFlags Flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+    static readonly string[] Clips = { "drop_003", "select_005", "confirmation_003", "drop_002", "error_005", "scratch_003", "drop_001", "toggle_004", "tick_002", "back_001", "pluck_002" };
+    [Serializable] public class Cue { public int frame; public string clip; }
+    [Serializable] public class Take { public string name; public int fps = Fps; public int frames; public int width; public int height; public List<Cue> cues = new List<Cue>(); }
+    [Serializable] public class Status { public string state; public string shot; public int frame; public int total; public string message; }
+    public string Output;
+    public string Stage;
+    public int Frame;
+    public bool Done;
+    LotteryGame game;
+    MainMenuScreen menu;
+    LotterySfx sfx;
+    Camera cam;
+    Mouse mouse, oldMouse;
+    RectTransform pointer;
+    GameObject pointerCanvas;
+    Texture2D pointerTexture;
+    int oldCapture;
+    bool oldBackground;
+    int[] lastSeen;
+
+    object Get(object o, string n) => o.GetType().GetField(n, Flags).GetValue(o);
+    void Set(object o, string n, object v) => o.GetType().GetField(n, Flags).SetValue(o, v);
+    object Call(object o, string n, params object[] args) => o.GetType().GetMethod(n, Flags).Invoke(o, args);
+    LotteryTicket Ticket => (LotteryTicket)Get(game, "currentTicket");
+    void View(MainMenuScreen.ScreenView view) => Call(menu, "Show", view);
+    void Refresh() => Call(game, "RefreshUI");
+    void WriteStatus(string state, string message = "") => File.WriteAllText(Path.Combine(Output, "capture-status.json"), JsonUtility.ToJson(new Status { state = state, shot = Stage, frame = Frame, message = message }));
+
+    public void Begin(string mode)
+    {
+        Output = Path.GetFullPath(Path.Combine(Application.dataPath, "../Docs/TrailerPlan/Production"));
+        Directory.CreateDirectory(Path.Combine(Output, "raw"));
+        game = FindAnyObjectByType<LotteryGame>(); menu = MainMenuScreen.Instance;
+        if ((bool)Get(game, "sessionStarted")) throw new InvalidOperationException("Cannot film an active saved session.");
+        sfx = FindAnyObjectByType<LotterySfx>(); cam = Camera.main;
+        oldCapture = Time.captureFramerate; oldBackground = Application.runInBackground;
+        Application.runInBackground = true; Time.captureFramerate = Fps;
+        foreach (var e in FindObjectsByType<EventSystem>(FindObjectsInactive.Include)) e.enabled = false;
+        menu.enabled = false; ScreenFader.Clear();
+        oldMouse = Mouse.current; mouse = InputSystem.AddDevice<Mouse>(); mouse.MakeCurrent();
+        MakePointer();
+        StartCoroutine(Run(mode));
+    }
+
+    void MakePointer()
+    {
+        pointerCanvas = new GameObject("Filming pointer overlay", typeof(Canvas));
+        var canvas = pointerCanvas.GetComponent<Canvas>(); canvas.renderMode = RenderMode.ScreenSpaceOverlay; canvas.sortingOrder = 190;
+        pointerTexture = new Texture2D(24, 32, TextureFormat.RGBA32, false); pointerTexture.filterMode = FilterMode.Point;
+        var colors = new Color32[24 * 32];
+        for (int y = 0; y < 28; y++) for (int x = 0; x < 20; x++)
+        {
+            bool arrow = y < 22 && x <= y * 0.55f;
+            bool stem = y >= 14 && y < 28 && x >= 6 && x <= 10;
+            if (!arrow && !stem) continue;
+            bool edge = x == 0 || (arrow && (x >= y * 0.55f - 1 || y == 21)) || (stem && (x == 6 || x == 10 || y == 27));
+            colors[(31-y)*24+x] = edge ? new Color32(12,20,30,255) : new Color32(255,249,225,255);
+        }
+        pointerTexture.SetPixels32(colors); pointerTexture.Apply();
+        var go = new GameObject("Pointer", typeof(RectTransform), typeof(RawImage)); go.transform.SetParent(pointerCanvas.transform, false);
+        pointer = (RectTransform)go.transform; pointer.anchorMin = pointer.anchorMax = Vector2.zero; pointer.pivot = new Vector2(0,1);
+        pointer.sizeDelta = new Vector2(24,32) * (Screen.height / 720f);
+        go.GetComponent<RawImage>().texture = pointerTexture; go.GetComponent<RawImage>().raycastTarget = false;
+        go.SetActive(false);
+    }
+    void MouseAt(Vector2 p, bool down, bool visible = true)
+    {
+        mouse.MakeCurrent();
+        InputSystem.QueueStateEvent(mouse, new MouseState { position = p }.WithButton(MouseButton.Left, down));
+        pointer.gameObject.SetActive(visible); pointer.anchoredPosition = p;
+    }
+    Vector2 ScreenPoint(Vector3 world) => cam.WorldToScreenPoint(world);
+    void Release(bool visible = false) => MouseAt(mouse.position.ReadValue(), false, visible);
+    IEnumerator Advance(float seconds)
+    {
+        for (int i = 0; i < Mathf.CeilToInt(seconds * Fps); i++) yield return null;
+    }
+    IEnumerator Record(string name, float seconds, Action<float> action = null)
+    {
+        Stage = name; Frame = 0; string directory = Path.Combine(Output, "raw", name); Directory.CreateDirectory(directory);
+        var take = new Take { name = name, width = Screen.width, height = Screen.height, frames = Mathf.RoundToInt(seconds * Fps) };
+        lastSeen = (int[])((int[])Get(sfx,"lastFrames")).Clone();
+        WriteStatus("recording");
+        for (int i = 0; i < take.frames; i++)
+        {
+            action?.Invoke(i / (float)Fps);
+            yield return null;
+            yield return new WaitForEndOfFrame();
+            Texture2D image = ScreenCapture.CaptureScreenshotAsTexture();
+            File.WriteAllBytes(Path.Combine(directory, i.ToString("D5") + ".png"), image.EncodeToPNG());
+            Destroy(image);
+            var frames = (int[])Get(sfx, "lastFrames");
+            for (int j = 0; j < frames.Length; j++) if (frames[j] != lastSeen[j]) { take.cues.Add(new Cue { frame = i, clip = Clips[j] }); lastSeen[j] = frames[j]; }
+            Frame = i + 1;
+            if (Frame % 30 == 0) WriteStatus("recording");
+        }
+        Release();
+        File.WriteAllText(Path.Combine(directory, "take.json"), JsonUtility.ToJson(take, true));
+        WriteStatus("take-complete");
+    }
+    void ClearTicket()
+    {
+        // Stop the old removal coroutine before arranging a separate filming take.
+        game.StopAllCoroutines();
+        Release();
+        if (Ticket != null) Destroy(Ticket.gameObject);
+        Set(game, "currentTicket", null);
+        Refresh();
+    }
+    void Prepare()
+    {
+        Set(game, "sessionStarted", false);
+        game.StopAllCoroutines(); Call(game, "ClearPlates"); game.Scratcher.ClearAll(false); ClearTicket();
+        foreach (string n in new[] {"goldUnlocked","novaUnlocked","heartMatchUnlocked","crossCodeUnlocked","zigzagRunUnlocked","purpleUnlocked","washerUnlocked","multiPlateUnlocked","autoFeedUnlocked","scratcherUnlocked","hasWon"}) Set(game,n,false);
+        foreach (string n in new[] {"multiPlateLevel","plateValueLevel","speedLevel","capacityLevel","scratcherSpeedLevel","scratcherCapacityLevel"}) Set(game,n,0);
+        Array.Clear((int[])Get(game,"scratched"),0,6); Array.Clear((int[])Get(game,"milestoneStages"),0,6);
+        Set(game,"balance",6800);
+        Call(game,"RefreshWasher"); Call(game,"RefreshScratcher",false);
+        var sponge = (SpongeDrag)Get(game,"sponge"); sponge.SetAdvanced(false); sponge.ResetToDesignPosition();
+        View(MainMenuScreen.ScreenView.Playing); game.ShowTickets(); Refresh();
+    }
+    IEnumerator BuyTicket(int kind, bool positive = true)
+    {
+        ClearTicket();
+        string[] methods = {"NewLuckyTicket","NewGoldTicket","NewNovaTicket","NewHeartMatchTicket","NewCrossCodeTicket","NewZigzagRunTicket"};
+        Call(game,methods[kind]); if (Ticket == null) Call(game,methods[kind]);
+        if (Ticket == null) throw new InvalidOperationException("Ticket purchase failed for " + kind);
+        if (positive)
+        {
+            int prize = Ticket.Prize;
+            for (int i=0; prize<=0 && i<100; i++) prize=Ticket.RollPrize();
+            Ticket.Initialize(game,kind,prize);
+        }
+        yield return Advance(.65f);
+    }
+    Vector2 ScratchPoint(ScratchCard cover, float progress)
+    {
+        var sprite = (Sprite)Get(cover,"runtimeSprite");
+        int minX=(int)Get(cover,"opaqueMinX"),maxX=(int)Get(cover,"opaqueMaxX"),minY=(int)Get(cover,"opaqueMinY"),maxY=(int)Get(cover,"opaqueMaxY");
+        int rows = Mathf.CeilToInt((maxY-minY+1)/7f);
+        float route=Mathf.Clamp(progress,0,.9999f)*rows; int row=Mathf.FloorToInt(route); float across=route-row;
+        float x=Mathf.Lerp(minX+1,maxX-1,row%2==0?across:1-across);
+        float y=Mathf.Min(maxY,minY+3+row*7);
+        return ScreenPoint(cover.transform.TransformPoint(new Vector3((x-sprite.pivot.x)/sprite.pixelsPerUnit,(y-sprite.pivot.y)/sprite.pixelsPerUnit,0)));
+    }
+    IEnumerator ScratchTake(string name, float length, float scratchSeconds)
+    {
+        var ticket=Ticket; var cover=ticket.GetComponentInChildren<ScratchCard>();
+        yield return Record(name,length,t=>{
+            if (cover!=null && t < scratchSeconds && !ticket.Settled) MouseAt(ScratchPoint(cover,t/scratchSeconds),true);
+            else Release();
+        });
+    }
+    IEnumerator Run(string mode)
+    {
+        yield return Advance(.5f);
+        if (mode=="smoke") { View(MainMenuScreen.ScreenView.MainMenu); yield return Record("smoke",.15f); Finish(); yield break; }
+        Prepare();
+        if (mode != "remaining")
+        {
+        yield return BuyTicket(0); yield return ScratchTake("hook",5f,2f);
+
+        var tutorial=(NewGameTutorial)Get(menu,"tutorial"); tutorial.Begin(); View(MainMenuScreen.ScreenView.Tutorial);
+        Release(); yield return Advance(.15f); yield return Record("cat",3.2f); View(MainMenuScreen.ScreenView.Playing);
+
+        ClearTicket(); Call(game,"ClearPlates");
+        var sponge=(SpongeDrag)Get(game,"sponge"); sponge.SetAdvanced(false);
+        game.OneMorePlate(); yield return Advance(1.3f);
+        DirtyPlate plate=game.Plates[0]; var dirt=(SpriteRenderer)Get(plate,"dirtRenderer");
+        Vector2 spongeStart=ScreenPoint(sponge.GetComponent<SpriteRenderer>().bounds.center);
+        Bounds dirtBounds=dirt.bounds; Vector3 grabOffset=sponge.transform.position-sponge.GetComponent<SpriteRenderer>().bounds.center;
+        yield return Record("scrub_yellow",5f,t=>{
+            if (t < .12f) { MouseAt(spongeStart,true); return; }
+            if (plate==null || t>4.6f) { Release(); return; }
+            float p=Mathf.Clamp01((t-.12f)/4.2f); float route=p*27f; int line=Mathf.FloorToInt(route); float u=route-line;
+            Vector3 target=new Vector3(Mathf.Lerp(dirtBounds.min.x,dirtBounds.max.x,(line%2)==0?u:1-u),Mathf.Lerp(dirtBounds.min.y,dirtBounds.max.y,((line/9)%3+.5f)/3f),sponge.transform.position.z);
+            MouseAt(ScreenPoint(target-grabOffset),true);
+        });
+        Call(game,"ClearPlates"); game.BuyPurpleSponge(); sponge.ResetToDesignPosition(); game.OneMorePlate(); yield return Advance(1.3f);
+        plate=game.Plates[0]; dirt=(SpriteRenderer)Get(plate,"dirtRenderer"); spongeStart=ScreenPoint(sponge.GetComponent<SpriteRenderer>().bounds.center);
+        Vector2 cleanTarget=ScreenPoint(dirt.bounds.center);
+        yield return Record("scrub_purple",2.5f,t=>{if(t<.12f)MouseAt(spongeStart,true);else if(t<1.1f)MouseAt(Vector2.Lerp(spongeStart,cleanTarget,Mathf.SmoothStep(0,1,(t-.12f)/.8f)),true);else Release();});
+        Call(game,"ClearPlates"); yield return Advance(.4f);
+        }
+
+        Set(game,"balance",640000); Refresh();
+        for(int kind=0;kind<6;kind++) { yield return BuyTicket(kind); yield return ScratchTake("ticket_"+kind,1.2f,.95f); }
+        ClearTicket(); yield return Advance(.5f);
+        game.BuyWasher(); game.BuyScratcher(); for(int i=0;i<3;i++)game.UpgradeSpeed();
+        for(int i=0;i<3;i++)game.UpgradeScratcherSpeed(); game.UpgradeScratcherCapacity();
+        yield return Advance(1.3f); yield return BuyTicket(1); game.ShowTickets(); yield return Advance(.3f);
+        var dragTicket=Ticket; var renderer=dragTicket.GetComponent<SpriteRenderer>();
+        Vector3 border=renderer.bounds.center+new Vector3(renderer.bounds.extents.x*.93f,0,0); Vector2 borderScreen=ScreenPoint(border);
+        Vector3 center; Vector2 size; game.Scratcher.TryGetContentRectWorld(out center,out size); Vector2 feedScreen=ScreenPoint(center);
+        bool tab=false,upgrade=false;
+        yield return Record("upgrade",4.5f,t=>{
+            if(t>=.1f&&!tab){game.ShowGadgets();tab=true;}
+            if(t>=.65f&&!upgrade){game.UpgradeCapacity();upgrade=true;}
+            if(t<1.35f)Release();else if(t<1.5f)MouseAt(borderScreen,true);else if(t<3.25f)MouseAt(Vector2.Lerp(borderScreen,feedScreen,Mathf.SmoothStep(0,1,(t-1.5f)/1.6f)),true);else Release(true);
+        });
+        if(!dragTicket.Settled) throw new InvalidOperationException("Manual feed recording did not accept ticket.");
+        yield return Advance(6f); yield return Record("machines",6f);
+
+        game.Scratcher.ClearAll(false); ClearTicket();
+        Set(game,"autoFeedUnlocked",false); ((int[])Get(game,"scratched"))[0]=9; ((int[])Get(game,"milestoneStages"))[0]=0;
+        game.ShowTickets(); yield return BuyTicket(0); yield return ScratchTake("milestone",4.5f,1.1f);
+
+        View(MainMenuScreen.ScreenView.MainMenu); Release(); yield return Advance(.5f);
+        var newGame=(Button)Get(menu,"newGameButton"); Vector2 buttonPoint=RectTransformUtility.WorldToScreenPoint(null,newGame.transform.position); bool hovered=false;
+        yield return Record("menu",4.5f,t=>{
+            if(t>.8f)MouseAt(Vector2.Lerp(new Vector2(Screen.width*.72f,Screen.height*.22f),buttonPoint,Mathf.SmoothStep(0,1,(t-.8f)/.7f)),false);
+            if(t>1.5f&&!hovered){var data=new PointerEventData(EventSystem.current){position=buttonPoint};ExecuteEvents.Execute(newGame.gameObject,data,ExecuteEvents.pointerEnterHandler);hovered=true;}
+        });
+        Finish();
+    }
+    void Finish()
+    {
+        Done=true;Stage="complete";WriteStatus("complete"); Release();
+        Time.captureFramerate=oldCapture; Application.runInBackground=oldBackground;
+        if(mouse!=null){InputSystem.RemoveDevice(mouse);mouse=null;if(oldMouse!=null)oldMouse.MakeCurrent();}
+        if(pointerCanvas!=null)Destroy(pointerCanvas); if(pointerTexture!=null)Destroy(pointerTexture);
+    }
+    void OnDestroy()
+    {
+        Time.captureFramerate=oldCapture; Application.runInBackground=oldBackground;
+        if(mouse!=null){InputSystem.RemoveDevice(mouse);mouse=null;if(oldMouse!=null)oldMouse.MakeCurrent();}
+        if(pointerCanvas!=null)Destroy(pointerCanvas); if(pointerTexture!=null)Destroy(pointerTexture);
+    }
+}
