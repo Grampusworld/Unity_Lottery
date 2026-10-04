@@ -78,14 +78,20 @@ public class LotteryGame : MonoBehaviour
     [SerializeField] private Button gadgetsTabButton;
     [SerializeField] private GameObject debugPanel;
 
+    // v4：2026-10-04 数值重标定（40 分钟节奏+ 里程碑改倍率 + 通关目标 200 万）。
     // v3：2026-10-01 数值整体重标定（票价 / 洗盘机 / 刮票机 / 全局倍率 / 通关目标）。
     // 旧档的余额与等级在新表下没有意义，直接作废，不做迁移。
-    private const string SavePrefix = "LotteryPrototype.v3.";
+    // **里程碑倍率必须存档**：v4 里它是持续生效的全局倍率，
+    // 不存的话重开游戏会退回v3 语义（现金奖励），等价于白送一次倍率重置。
+    // **Won 同理必须存档**（2026-10-04）：它是「结算画面只弹一次」的唯一依据。
+    // 不存的话玩家通关后退出 → 存档里余额仍≥ 目标 → 下次进游戏立刻再弹一次结算。
+    private const string SavePrefix = "LotteryPrototype.v4.";
     private bool sessionStarted;
-    // Balance is the fallback for existing v3 saves made before the main menu was added.
+    // Balance is the fallback for existing v4 saves made before the main menu was added.
     public static bool HasSavedGame => PlayerPrefs.GetInt(SavePrefix + "HasStarted", 0) != 0 ||
         PlayerPrefs.HasKey(SavePrefix + "Balance");
-    private static readonly string[] SaveKeys = { "Balance", "Gold", "Nova", "Purple", "Washer", "MultiPlate", "MultiPlateLevel", "PlateValueLevel", "Speed", "Capacity", "Scratched0", "Scratched1", "Scratched2", "Scratched3", "Scratched4", "Scratched5", "HeartMatch", "CrossCode", "ZigzagRun", "Scratcher", "ScratchSpeed", "ScratchCapacity", "AutoFeed", "HasStarted" };
+    private static readonly string[] SaveKeys = { "Balance", "Gold", "Nova", "Purple", "Washer", "MultiPlate", "MultiPlateLevel", "PlateValueLevel", "Speed", "Capacity", "Scratched0", "Scratched1", "Scratched2", "Scratched3", "Scratched4", "Scratched5", "HeartMatch", "CrossCode", "ZigzagRun", "Scratcher", "ScratchSpeed", "ScratchCapacity", "AutoFeed", "HasStarted", "Milestone0", "Milestone1", "Milestone2", "Milestone3", "Milestone4", "Milestone5", "Won" };
+
 
     public void BeginSession() { sessionStarted = true; SaveState(); }
     public void SaveProgress() => SaveState();
@@ -113,6 +119,8 @@ public class LotteryGame : MonoBehaviour
     private const int WinTarget = LotteryEconomy.WinTarget;
     private int balance;
     private readonly int[] scratched = new int[6];
+    // 每票已达成的里程碑档数（0..Milestones.Length）。驱动 MilestoneMultiplier()。
+    private readonly int[] milestoneStages = new int[6];
     private bool goldUnlocked, novaUnlocked, purpleUnlocked, washerUnlocked;
     private bool heartMatchUnlocked, crossCodeUnlocked, zigzagRunUnlocked;
     private bool multiPlateUnlocked;
@@ -129,6 +137,17 @@ public class LotteryGame : MonoBehaviour
     private bool autoFeedUnlocked;
     // 通关：持有余额首次达到 WinTarget 时置位。只用于「已经通关」的表现，不拦玩法。
     private bool hasWon;
+    // 桌子正上方的 GOAL 牌子（文字 + 进度条 + 百分比）。留空则不显示。
+    [SerializeField] private GoalBanner goalBanner;
+    // 本次会话的游玩秒数（不含暂停/主菜单）。**刻意不存档**：
+    // 它是「这一局花了多久」的报数，不是进度 —— 退出重进应当从0 重新计。
+    private float sessionSeconds;
+    // 达成瞬间的快照。结算画面显示的是这些值，而不是它被打开那一刻的实时值——
+    // 玩家达成后可能已经花钱到目标以下，面板上的战绩不该跟着跳。
+    private int victoryBalance;
+    private int victoryTickets;
+    private float victoryMultiplier;
+    private float victorySeconds;
     private LotteryTicket currentTicket;
     // 桌上的脏盘子。MULTIPLE PLATES 解锁前这里最多只有 1 个 —— 也就是旧的 currentPlate 语义。
     // 改成集合之后，「一次只能一个盘子」这件事变成 plateCapacity 的取值，而不是写死的守卫。
@@ -141,6 +160,12 @@ public class LotteryGame : MonoBehaviour
     // 上一次应用的「解锁可见性」掩码（bit0 = 洗盘机、bit1 = 刮票机）。
     // -1 = 还没应用过，保证 Start 里那一遍一定会跑。
     private int lastGadgetRowMask = -1;
+    // TICKETS 列表 6 行的**固定语义顺序**（LUCKY / GOLD / NOVA / HEARTMATCH / CROSSCODE / ZIGZAG）。
+    // 与 gadgetRows 同样的道理：顺序由代码给定，不靠场景里的 y 或兄弟顺序推。
+    private RectTransform[] ticketRows;
+    // 上一次应用的票行可见性掩码（bit0..4 = GOLD / NOVA / HEARTMATCH / CROSSCODE / ZIGZAG 已解锁）。
+    // 五个全进掩码：可见性判据里每一票的 unlocked 都可能是「或」的后半截，漏一个就会漏刷新。
+    private int lastTicketRowMask = -1;
 
     // 桌上最多能同时摆几张脏盘子。解锁前后只差这一个数。
     public int PlateCapacity => multiPlateUnlocked ? MultiPlateBaseCapacity * (multiPlateLevel + 1) : 1;
@@ -203,14 +228,40 @@ public class LotteryGame : MonoBehaviour
 
     public float OutputMultiplier => Mathf.Pow(BoostPerLevel, TotalUpgradeLevels);
 
+    // 里程碑倍率（v4）。加性累加：M = 1 + Σ Δ[ticket][已达成档数]。
+    // 与 OutputMultiplier **相乘** —— 两者是并列的指数源，不相加。
+    // MilestoneMultipliers 是 static 数组，而达成档数是实例状态，所以必须是实例方法。
+    public float MilestoneMultiplier()
+    {
+        float m = 1f;
+        for (int i = 0; i < milestoneStages.Length && i < MilestoneMultipliers.Length; i++)
+            m += MilestoneMultipliers[i] * milestoneStages[i];
+        return m;
+    }
+
+    // 总倍率：升级链 × 里程碑。终局约 30.9 × 4.73 = 146x（求解器实测 114.7x，
+    // 因为求解器里里程碑按概率逐步命中，不是开局就满）。
+    public float TotalMultiplier => OutputMultiplier * MilestoneMultiplier();
+
     // 所有收入的唯一出口。任何"给钱"的地方都必须走它，否则那条线就不吃倍率，
     // 症状是"买了半天升级，只有一部分数字在涨"。
-    private int Gain(int amount) => Mathf.Max(0, Mathf.RoundToInt(amount * OutputMultiplier));
+    private int Gain(int amount) => Mathf.Max(0, Mathf.RoundToInt(amount * TotalMultiplier));
 
     // 通关：持有余额达到目标。用"持有"而不是"累计赚取"是为了给剧情一个明确的结算点。
     public bool HasWon => hasWon;
     public int WinTargetMoney => WinTarget;
     public bool AutoFeedUnlocked => autoFeedUnlocked;
+    // 本局累计刮出的票数（六票合计）。结算面板的 TICKETS 行读它。
+    public int TotalTicketsScratched
+    {
+        get
+        {
+            int sum = 0;
+            for (int i = 0; i < scratched.Length; i++) sum += scratched[i];
+            return sum;
+        }
+    }
+    public float SessionSeconds => sessionSeconds;
     private string ScratcherTierName
     {
         get
@@ -247,6 +298,18 @@ public class LotteryGame : MonoBehaviour
         if (moneyShake == null && balanceText != null) moneyShake = balanceText.GetComponent<MoneyShake>();
         if (moneyShake != null) InsufficientFunds += moneyShake.Play;
         ShowTickets();
+        // 牌子：目标文本只写一次，进度由 RefreshUI 每帧推。
+        // Configure 必须在 hasWon 判定之前 —— 否则读档进来的已通关玩家
+        // 会先看到 0% 的条，下一帧才跳到 100%（一帧的闪）。
+        if (goalBanner != null)
+        {
+            goalBanner.Configure(WinTarget);
+            // 已通关的存档：直接补上完成态。不这么做的症状是重进游戏后
+            // 进度条停在 0%，而下面的 hasWon 判定因为 hasWon 已经是 true 不会触发 ——
+            // 达成态丢了，且没有任何报错。
+            if (hasWon) goalBanner.MarkComplete();
+        }
+        RefreshUI();
     }
 
     private void OnDestroy()
@@ -256,6 +319,12 @@ public class LotteryGame : MonoBehaviour
 
     private void Update()
     {
+        // 计时用 unscaled：达成转场 / 暂停期间 timeScale = 0，
+        // 用 scaled 会让「这一局玩了多久」在玩家暂停时也停 —— 那正是我们要的，
+        // 但达成那一刻 timeScale 已经被 Victory 视图置 0，scaled 会在同一帧
+        // 少累计一帧，读数差 0.016s（无所谓，但 unscaled 更直白且不受转场影响）。
+        // 累计条件是「没被阻塞」，所以主菜单期间不计时。
+        if (!MainMenuScreen.GameplayBlocked) sessionSeconds += Time.unscaledDeltaTime;
         if (MainMenuScreen.GameplayBlocked) return;
 #if ENABLE_INPUT_SYSTEM
         if (Keyboard.current != null && Keyboard.current.f1Key.wasPressedThisFrame) ToggleDebugMenu();
@@ -370,8 +439,19 @@ public class LotteryGame : MonoBehaviour
         // 奖金与里程碑奖励都吃全局倍率 —— 里程碑如果漏乘，后期会比一张票的零头还小。
         balance += Gain(prize);
         int count = ++scratched[index];
+        // 里程碑从「发一次性现金」改成「提升全局倍率」（2026-10-04，v4）。
+        // 所以这里**不能**再调 Gain —— 倍率是持续生效的，不是即时入账。
+        // 每达到一个门槛就把该票的 Δ 累加进 MilestoneCount（乘性叠加在倍率上）。
         for (int stage = 0; stage < Milestones.Length; stage++)
-            if (count == Milestones[stage]) balance += Gain(MilestoneBonuses[index, stage]);
+        {
+            if (count != Milestones[stage]) continue;
+            // **先**取旧倍率再改计数，否则 delta 恒为 0（两者都读同一个静态字段）。
+            float before = MilestoneMultiplier();
+            milestoneStages[index] = Mathf.Max(milestoneStages[index], stage + 1);
+            float delta = MilestoneMultiplier() - before;
+            if (coinFeedback != null)
+                coinFeedback.ShowMultiplier(MilestoneMultipliers[index], delta, source);
+        }
         if (balance > oldBalance) LotterySfx.Play(LotterySfx.Sound.CoinGain);
         if (coinFeedback != null) coinFeedback.ShowGain(balance - oldBalance, source);
         Commit();
@@ -687,19 +767,77 @@ public class LotteryGame : MonoBehaviour
         if (scroll != null) scroll.SetRows(gadgetRows, visible);
     }
 
+    // 票种按「低阶先解锁」逐级显现：GOLD 没解锁就不显示 NOVA，NOVA 没解锁就不显示 HEARTMATCH，
+    // 以此类推。玩家只看见「当前能推进的那一档 + 已经拿下的」，不会被5 个 UNLOCK 按钮同时砸脸。
+    // LUCKY 是白送的（UnlockPrices[0] = 0），GOLD 是第一道解锁入口 —— 这两行**永远显示**，
+    // 否则玩家看不到任何可点的东西。
+    //
+    // 隐藏不是「留个空档」，而是让 PixelRowScroll 把剩下的行重新紧凑排一遍（见 SetRows）。
+    // 只在掩码变化时动一次：RefreshUI 每帧都跑，每帧重排会跟滚动抢位置。
+    private void RefreshTicketRows()
+    {
+        // 与 RefreshGadgetRows 同一条理由：解锁状态来自存档，编辑器里跑会把「全都没解锁」
+        // 那一版布局烘进场景（票行被 SetActive(false)、Content 高度被改）。
+        if (!Application.isPlaying) return;
+
+        int mask = (goldUnlocked ? 1 : 0) | (novaUnlocked ? 2 : 0)
+            | (heartMatchUnlocked ? 4 : 0) | (crossCodeUnlocked ? 8 : 0)
+            | (zigzagRunUnlocked ? 16 : 0);
+        if (mask == lastTicketRowMask) return;
+        lastTicketRowMask = mask;
+
+        if (ticketRows == null)
+        {
+            Button[] buttons =
+            {
+                luckyTicketButton, goldTicketButton, novaTicketButton,
+                heartMatchTicketButton, crossCodeTicketButton, zigzagRunTicketButton
+            };
+            ticketRows = new RectTransform[buttons.Length];
+            for (int i = 0; i < buttons.Length; i++)
+                ticketRows[i] = buttons[i] != null ? buttons[i].transform as RectTransform : null;
+        }
+
+        // 顺序与上面 buttons 数组逐项对齐。SetRows 跳过 null 行，场景里少挂一个也不崩。
+        //
+        // 每行的判据是「自己已解锁**或**前一档已解锁」。后半截是保险：万一存档里出现
+        // novaUnlocked && !goldUnlocked（改档 / 旧档迁移），只写前半截会把已经买过的
+        // NOVA 那一行藏起来 —— 玩家从此再也点不到它买过的票种，那比多显示一行严重得多。
+        bool[] visible =
+        {
+            true, true,                                    // LUCKY / GOLD：入口，永远在
+            goldUnlocked || novaUnlocked,                  // NOVA        ← 要先有 GOLD
+            novaUnlocked || heartMatchUnlocked,            // HEARTMATCH  ← 要先有 NOVA
+            heartMatchUnlocked || crossCodeUnlocked,       // CROSSCODE   ← 要先有 HEARTMATCH
+            crossCodeUnlocked || zigzagRunUnlocked         // ZIGZAG      ← 要先有 CROSSCODE
+        };
+
+        if (ticketsPanel == null) return;
+        PixelRowScroll scroll = ticketsPanel.GetComponent<PixelRowScroll>();
+        if (scroll != null) scroll.SetRows(ticketRows, visible);
+    }
+
     private void RefreshUI()
     {
         PrunePlates();          // 别让已销毁的条目占着容量名额（见 PrunePlates）
         // 通关判定放在刷新入口：所有改余额的路径最后都会走到 RefreshUI，一处覆盖全场。
-        if (!hasWon && balance >= WinTarget)
+        if (!hasWon && balance >= WinTarget) TriggerVictory();
+        // 进度条每帧推，但达成后GoalBanner 内部锁死不回头 ——
+        // 玩家通关后继续花钱，余额掉到目标以下时条不会倒退（那看起来像目标被撤销）。
+        if (goalBanner != null)
         {
-            hasWon = true;
-            Debug.Log("[挂个爽] WIN | 持有 $" + balance + " 达成通关目标 $" + WinTarget
-                + " | 升级级数 " + TotalUpgradeLevels + " | 倍率 x" + OutputMultiplier.ToString("0.0"));
+            if (hasWon) goalBanner.MarkComplete();
+            else goalBanner.SetProgress(balance, false);
+            // 倍率走**独立通路**，不挂在 SetProgress / MarkComplete 里：
+            // 那两个方法在 completed 时会早退（进度条达成后要锁死），
+            // 搭车的后果是玩家通关后再升级，倍率文本永久冻结在通关那一刻。
+            // GoalBanner 保持纯显示—— 只收参数，不反向读游戏状态。
+            goalBanner.SetMultiplier(TotalMultiplier);
         }
         if (coinFeedback != null) coinFeedback.SyncBalance(balance);
         else if (balanceText != null) balanceText.text = "MONEY  " + MoneyFormat.Money(balance);
         RefreshGadgetRows();    // 未解锁的设备不显示它那一组升级行（洗盘机 / 刮票机）
+        RefreshTicketRows();    // 票种逐级显现：GOLD 没解锁就不显示 NOVA，以此类推
         RefreshNewTicket(luckyTicketButton, luckyProgressFill, "LUCKY", 0, true);
         RefreshNewTicket(goldTicketButton, goldProgressFill, "GOLD", 1, goldUnlocked);
         RefreshNewTicket(novaTicketButton, novaProgressFill, "NOVA", 2, novaUnlocked);
@@ -776,6 +914,43 @@ public class LotteryGame : MonoBehaviour
         SetTabColor(ticketsTabButton, showingTickets);
         SetTabColor(gadgetsTabButton, !showingTickets);
         RefreshGadgetIcons();
+    }
+
+    // ==================== 通关 ====================
+    // 唯一入口。由 RefreshUI 的判定调用 —— 不挂在某个「给钱」的方法上，
+    // 因为给钱的路径太多（票/机器/自动投喂/调试），挂一处必然漏一处。
+    private void TriggerVictory()
+    {
+        hasWon = true;
+        // 必须打 TotalMultiplier 而不是 OutputMultiplier —— v4 起里程碑也是一个倍率源，
+        // 只报升级链会少算一半（里程碑最高 4.73x）。
+        Debug.Log("[挂个爽] WIN | 持有 $" + balance + " 达成通关目标 $" + WinTarget
+            + " | 升级级数 " + TotalUpgradeLevels + " | 升级倍率 x" + OutputMultiplier.ToString("0.0")
+            + " | 里程碑倍率 x" + MilestoneMultiplier().ToString("0.0")
+            + " | 总倍率 x" + TotalMultiplier.ToString("0.0")
+            + " | 用时 " + VictoryPanel.FormatTime(sessionSeconds)
+            + " | 票数 " + TotalTicketsScratched);
+
+        // 快照：面板显示达成瞬间的值，不是它被打开那一刻的实时值。
+        victoryBalance = balance;
+        victoryTickets = TotalTicketsScratched;
+        victoryMultiplier = TotalMultiplier;
+        victorySeconds = sessionSeconds;
+
+        // 进度条立刻锁 100% 变金 —— 必须在转场之前。转场有 1 秒，
+        // 这期间条还是「99%」的话，玩家会先看到条没满、再看到面板弹出来。
+        if (goalBanner != null) goalBanner.MarkComplete();
+
+        // **先存盘再弹面板**：面板上的 MAIN MENU 按钮会调 SaveProgress，
+        // 但达成这一帧如果玩家直接杀掉进程，就什么都留不下。达成是里程碑事件，
+        // 值得单独落一次盘（hasWon + Won 键必须同批写，理由见 SaveState 的注释）。
+        SaveState();
+
+        MainMenuScreen menu = MainMenuScreen.Instance;
+        if (menu != null)
+            menu.ShowVictory(victoryBalance, victorySeconds, victoryTickets, victoryMultiplier);
+        // 没有菜单实例（理论上不会发生，MainMenuScreen 在场景里常驻）时，
+        // 达成态照样落盘、进度条照样变金，只是没有结算面板。不崩就算对。
     }
 
     // ==================== GADGETS 左侧图标 ====================
@@ -866,9 +1041,22 @@ public class LotteryGame : MonoBehaviour
     {
         if (!unlocked) return "THEN " + MoneyFormat.Money(TicketPrices[kind]) + " / TICKET";
         int next = NextMilestone(scratched[kind]);
-        if (next == 0) return "ALL MILESTONES COMPLETE";
-        int stage = System.Array.IndexOf(Milestones, next);
-        return "SCRATCHED " + scratched[kind] + "/" + next + "   BONUS " + MoneyFormat.Money(MilestoneBonuses[kind, stage]);
+        //里程碑提升的是**全局倍率**，不是产钱速度 —— 所以文案必须说"+X% MULT"。
+        // 缩写理由：这行是票面 Details，框宽 562px / fs18 = 最多 31 字符。
+        // 完整拼法 `12/25 SCRATCHED   NEXT +8% MULTIPLIER` = 36字符 = 648px 会溢出 86px。
+        // 「短行用 MULT、全词 MULTIPLIER」是排版层面的取舍，不是语义取舍——
+        // 同一语义在空间充裕处（飘字/ 结算面板）仍然写全词。
+        if (next == 0) return "ALL MILESTONES DONE   +" + TotalMilestonePercent(kind) + "% MULT";
+        // stage 不再需要（金额随档位变化，用同一个 Δ 即可 —— MilestoneMultipliers 是每票一个值）。
+        int delta = Mathf.RoundToInt(MilestoneMultipliers[kind] * 100f);
+        return scratched[kind] + "/" + next + " SCRATCHED   NEXT +" + delta + "% MULT";
+    }
+
+    // 达成里程碑后的累计倍率百分比，供 TicketDetail 的「全部达成」分支用。
+    // 与下面 delta 的单档倍率不同：这条要把 3 档（Milestones.Length）全算进去。
+    private int TotalMilestonePercent(int kind)
+    {
+        return Mathf.RoundToInt(MilestoneMultipliers[kind] * Milestones.Length * 100f);
     }
     private static int NextMilestone(int count)
     {
@@ -1058,6 +1246,12 @@ public class LotteryGame : MonoBehaviour
         scratcherCapacityLevel = Mathf.Clamp(PlayerPrefs.GetInt(SavePrefix + "ScratchCapacity", 0), 0, ScratcherCapacityCosts.Length);
         for (int i = 0; i < scratched.Length; i++)
             scratched[i] = Mathf.Max(0, PlayerPrefs.GetInt(SavePrefix + "Scratched" + i, 0));
+        // v4新增：里程碑达成档数。不读的话旧档（键不存在）默认为 0，等于白送一次倍率重置。
+        for (int i = 0; i < milestoneStages.Length; i++)
+            milestoneStages[i] = Mathf.Clamp(
+                PlayerPrefs.GetInt(SavePrefix + "Milestone" + i, 0), 0, Milestones.Length);
+        // 通关标记。与里程碑同理：不读 = 重开白送一次结算弹窗，且不报错。
+        hasWon = PlayerPrefs.GetInt(SavePrefix + "Won", 0) != 0;
     }
     private void SaveState()
     {
@@ -1081,6 +1275,11 @@ public class LotteryGame : MonoBehaviour
         PlayerPrefs.SetInt(SavePrefix + "ScratchSpeed", scratcherSpeedLevel);
         PlayerPrefs.SetInt(SavePrefix + "ScratchCapacity", scratcherCapacityLevel);
         for (int i = 0; i < scratched.Length; i++) PlayerPrefs.SetInt(SavePrefix + "Scratched" + i, scratched[i]);
+        for (int i = 0; i < milestoneStages.Length; i++)
+            PlayerPrefs.SetInt(SavePrefix + "Milestone" + i, milestoneStages[i]);
+        // 通关标记。**必须与hasWon 字段同批写** —— 漏掉的话玩家每次重进
+        // 都会再弹一次结算（这就是 milestoneStages 踩过的同一个坑的第二次重演）。
+        PlayerPrefs.SetInt(SavePrefix + "Won", hasWon ? 1 : 0);
         PlayerPrefs.Save();
     }
     private void OnApplicationPause(bool paused) { if (paused) SaveState(); }
@@ -1150,6 +1349,12 @@ public class LotteryGame : MonoBehaviour
         ClearPlates();
         currentTicket = null;
         hasWon = false;
+        // 达成态的其余部分一起清：牌子不回初始色的话，重置后进度条还是 100% 金色，
+        // 与「已重置」的语义直接矛盾（这是外观与状态脱钩，不是小瑕疵）。
+        if (goalBanner != null) goalBanner.ResetProgress();
+        victoryBalance = victoryTickets = 0;
+        victoryMultiplier = victorySeconds = 0f;
+        sessionSeconds = 0f;
         LoadState();
         if (coinFeedback != null) coinFeedback.Initialize(balanceText, balance);
         if (sponge != null) sponge.SetAdvanced(false);

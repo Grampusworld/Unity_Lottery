@@ -20,7 +20,7 @@ namespace Lottery.EditorTools
     ///   (8 chars * 40 = 320) but not the string the game writes at runtime,
     ///   "MONEY  $" + balance (9 chars * 40 = 360). Hence it fitted in the editor and
     ///   wrapped as soon as the game ran.
-    ///   Fix: wrapping off, box widened so the largest supported amount fits, and the
+    ///   Fix: wrapping off, box constrained to the shop with automatic font sizing, and the
     ///   serialized preview switched to the same two-space format as LotteryGame.RefreshUI
     ///   so the editor can never disagree with play mode again.
     ///
@@ -39,12 +39,11 @@ namespace Lottery.EditorTools
         // ---- Money line -------------------------------------------------------------------
         const float MoneyX = 25f;
         const float MoneyY = -83f;
+        // Keep 25px on each side, including room for the 20px insufficient-funds shake.
         const float MoneyWidth = 600f;
         const float MoneyHeight = 92.49f;
         const float MoneyFontSize = 40f;
-
-        /// <summary>Widest amount we must be able to show: "MONEY  $99999" = 13 characters.</summary>
-        const int MoneyMaxChars = 15;
+        const float MoneyMinFontSize = 16f;
 
         // ---- Rows -------------------------------------------------------------------------
         /// <summary>One gap value for both panels.</summary>
@@ -107,7 +106,7 @@ namespace Lottery.EditorTools
             Debug.Log("[ShopLayoutFix] Shop layout repaired and scene saved.\n"
                       + "  money line: NoWrap, box " + MoneyWidth + "x" + MoneyHeight
                       + " at (" + MoneyX + ", " + MoneyY + "), fontSize " + MoneyFontSize
-                      + ", fits up to " + (MoneyWidth / MoneyFontSize) + " characters\n"
+                      + ", auto-size down to " + MoneyMinFontSize + "\n"
                       + "  uniform gap: " + Gap + "px\n"
                       + "  tickets: " + TicketButtons.Length + " buttons, height " + TicketButtonHeight
                       + ", pitch " + (TicketButtonHeight + Gap) + "\n"
@@ -118,7 +117,7 @@ namespace Lottery.EditorTools
                       + "  border: RGB" + (Color32)BorderColor + " over " + BorderDistance + "px");
         }
 
-        static void FixMoneyLine(Transform shop)
+        public static void FixMoneyLine(Transform shop)
         {
             Transform money = shop.Find(MoneyName);
             if (money == null)
@@ -131,10 +130,10 @@ namespace Lottery.EditorTools
             if (rect != null)
             {
                 rect.anchorMin = new Vector2(0f, 1f);
-                rect.anchorMax = new Vector2(0f, 1f);
+                rect.anchorMax = new Vector2(1f, 1f);
                 rect.pivot = new Vector2(0f, 1f);
                 rect.anchoredPosition = new Vector2(MoneyX, MoneyY);
-                rect.sizeDelta = new Vector2(MoneyWidth, MoneyHeight);
+                rect.sizeDelta = new Vector2(-2f * MoneyX, MoneyHeight);
             }
 
             TMP_Text text = money.GetComponent<TMP_Text>();
@@ -146,23 +145,18 @@ namespace Lottery.EditorTools
 
             text.textWrappingMode = TextWrappingModes.NoWrap;
             text.overflowMode = TextOverflowModes.Overflow;
-            text.enableAutoSizing = false;
+            text.enableAutoSizing = true;
+            text.fontSizeMin = MoneyMinFontSize;
+            text.fontSizeMax = MoneyFontSize;
             text.fontSize = MoneyFontSize;
-            // Centring keeps the line where it has always looked like it sits, and lets it grow
-            // in both directions instead of running off the right edge of the panel.
+            // Center the complete amount within the shop; long values shrink instead of spilling.
             text.horizontalAlignment = HorizontalAlignmentOptions.Center;
             // Geometry is what the scene already used, so the line keeps its exact vertical seat.
             text.verticalAlignment = VerticalAlignmentOptions.Geometry;
             // Two spaces, exactly as LotteryGame.RefreshUI builds it at runtime.
             text.text = "MONEY  $0";
 
-            float needed = MoneyMaxChars * MoneyFontSize;
-            if (MoneyWidth < needed)
-            {
-                Debug.LogWarning("[ShopLayoutFix] money box is " + MoneyWidth + "px but "
-                                 + MoneyMaxChars + " characters need " + needed
-                                 + "px at fontSize " + MoneyFontSize);
-            }
+
         }
 
         static void FixRow(Transform shop, string panelName, string[] buttonNames,

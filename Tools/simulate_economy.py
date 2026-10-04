@@ -1,3 +1,6 @@
+# 已过时（v3 快照，2026-10-01 数值）—— 保留仅作历史参照，**不要再用它校准当前数值**。
+# v4（2026-10-04，40 分钟节奏）请用 solve_economy.py：那是真正的求解器，
+# 本脚本只是当时数值的一次性快照，且不含里程碑倍率与 per-purchase T。
 # Snapshot of the approved initial economy. Update these tables and goals when retuning LotteryEconomy.cs.
 import random, statistics, json
 PRICES=[10,25,60,100,250,500]

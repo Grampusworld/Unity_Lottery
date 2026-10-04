@@ -43,7 +43,7 @@ public class MoneyShake : MonoBehaviour
         if (rect != null) homePosition = rect.anchoredPosition;
         if (label != null)
         {
-            homeFontSize = label.fontSize;
+            homeFontSize = label.enableAutoSizing ? label.fontSizeMax : label.fontSize;
             homeColor = label.color;
         }
     }
@@ -81,7 +81,9 @@ public class MoneyShake : MonoBehaviour
         if (label == null || rect == null) return;
 
         float pixelStep = Mathf.Max(8f, Mathf.Round(growthStep / 8f) * 8f);
-        label.fontSize = homeFontSize + pixelStep * stack;
+        // Grow only as far as the fixed money box allows.
+        if (label.enableAutoSizing) label.fontSizeMax = homeFontSize + pixelStep * stack;
+        else label.fontSize = homeFontSize + pixelStep * stack;
         label.color = shakeColor;
 
         float motionScale = HoverJellySettings.ReducedMotion ? reducedAmplitudeScale : 1f;
@@ -102,7 +104,8 @@ public class MoneyShake : MonoBehaviour
         stack = 0;
         if (label != null)
         {
-            label.fontSize = homeFontSize;
+            if (label.enableAutoSizing) label.fontSizeMax = homeFontSize;
+            else label.fontSize = homeFontSize;
             label.color = homeColor;
         }
         if (rect != null) rect.anchoredPosition = homePosition;

@@ -1,33 +1,43 @@
 // 经济数值的公共来源。预制体奖池由 EconomyShopSetup 写入，运行时沿用原有 prizes 字段。
 //
-// ==================== 2026-10-01 数值重标定（v3） ====================
-// 目标：通关 = 持有 WinTarget（$1,000,000），单局约 60 分钟。
+// ==================== 2026-10-04 数值重标定（v4）：40 分钟节奏 ====================
+// 目标：通关 = 持有 WinTarget（$2,000,000），实测 40.4 分钟（pivot 见 Tools/solve_economy.py）。
 //
 // 【三条规则 —— 改任何一个数之前先读这三条】
 //
-//  ① 价格 = 该级购买瞬间的收入速率 × 85 秒。
-//     这就是全部价格表的来源。回本时间恒定 → 玩家的购买间隔均匀 → 成长节奏清晰。
-//     实测 37 个购买点，每点间隔 85 秒，购买阶段约 52 分钟，末段积累 7 分钟，合计 59.8 分钟。
-//     **不要手改单个价格**：改一处就等于在那个位置插进一个节奏断点。要调节奏改 T（85s）。
+//  ① 价格不再是「速率 × 85 秒」的单一常数。
+//     40 分钟节奏的时间点**不均匀**（4/10/15/20/30/40 min，间隔 6/5/5/10/10），
+//     而均匀 T 必然让第一个购买点落在 t = T —— 要它落在 4 分钟就得 T = 4 分钟，
+//     37点 × 4 分钟 = 148 分钟。**均匀 T 与本节奏数学互斥**，不是调参能解决的。
+//     现在每个购买点有独立的回本 T（见下表，回本列）。
+//     **要调节奏改 SCHED 里的目标时刻，重跑 Tools/solve_economy.py 重解价格，不要手改单个价格。**
 //
-//  ② 全局倍率 BoostPerLevel 是唯一的指数增长源。
-//     各链自带的倍数（洗盘机容量 ×3、盘价值 ×8、票种 ×50）本身已经是一个不小的跨度，
-//     如果链自身也指数化，两者相乘就是双重膨胀 —— 实测会把终局速率推到目标值的几十倍。
-//     所以链只负责「功能 + 节奏」，增长全部由 BoostPerLevel 承担。校准值 1.10 是解出来的，别凭感觉改。
+//  ② 全局倍率有两个来源，相乘而非相加。
+//     BoostPerLevel（每买下任意一级升级 ×1.10）负责「升级链节奏」；
+//     MilestoneMultipliers（彩票里程碑）负责「彩票线变强」。终局约 114.7x。
+//     **两者都是指数源，不要再引入第三个。** 链内部跨度（洗盘机、盘价值）已冻结，
+//     改它们等于重画机器手感，代价远大于收益。
 //
-//  ③ 内容总成本（$1,227,852）必须与 WinTarget 同量级。
-//     内容远小于目标 = 玩家买光后干等（这是改版前 $46,045 vs $1,000,000 的病）。
+//  ③ 内容总成本必须与 WinTarget 同量级。
+//     现状 C = $3,624,433 vs W = $2,000,000（C/W = 1.81）。内容 ≳ 目标才不会出现
+//     「买光后干等」。C/W 掉到 1 以下意味着后期无事可做。
 //
-// 【改完必须重跑一次校准模拟】见 .workbuddy/memory 里的记录，不要靠肉眼估。
+// 【WinTarget 的推导】W = Rf × tail。终局速率 Rf = $11,577/s（累计倍率 114.7x），
+//     最后一个购买点在 37.5 分钟，留 2.9 分钟积累 → W = 11,577 × 173 ≈ $2,000,000。
+//     **调 W 是纯乘数，不影响任何购买节奏** —— 实测总时长偏差时优先调 W，不要动价格。
+//     注意：20/30/50 万已被排除 —— 它们只够 17–43 秒积累，玩家会在 30 分钟就撞线通关。
+//
+// 【改完必须重跑 Tools/solve_economy.py 校准】，不要靠肉眼估。
 // ====================================================================
 public static class LotteryEconomy
 {
     public static readonly string[] TicketNames = { "LUCKY", "GOLD", "NOVA", "HEARTMATCH", "CROSSCODE", "ZIGZAG" };
 
-    // 票价：ROI 从 ~1.9x 提到 ~1.5x。奖池不动、只提价 ——
-    // 原值（10/25/60/100/250/500）下买票是无风险印钞，会把盘子线彻底碾死。
+    // 票价维持 v3：ROI 统一 1.47–1.50x，是节奏模型的输入，动了要重跑求解器。
     public static readonly int[] TicketPrices = { 13, 31, 68, 134, 300, 625 };
-    public static readonly int[] UnlockPrices = { 0, 83, 668, 2461, 9070, 54796 };
+
+    // 解锁价来自求解器：GOLD 10:00 / NOVA 14:50 / HEARTMATCH 18:00 / CROSSCODE 23:00 / ZIGZAG 30:00
+    public static readonly int[] UnlockPrices = { 0, 423, 711, 3005, 17964, 94059 };
 
     public static readonly int[][] PrizePools = {
         new[] { 0, 5, 10, 20, 50 },                    // LUCKY
@@ -41,55 +51,65 @@ public static class LotteryEconomy
     public const int HeartTriplePrize = 600;
     public const int CrossMatchPrize = 250;
 
-    // 里程碑：金额按「该票前 10/25/50 张净利的 25–30%」重算（原值在 $1M 目标下只占 0.27%）。
+    // 里程碑门槛不变（10/25/50 张）。
     public static readonly int[] Milestones = { 10, 25, 50 };
-    public static readonly int[,] MilestoneBonuses = {
-        { 15, 25, 40 },        // LUCKY
-        { 35, 60, 95 },        // GOLD
-        { 80, 130, 200 },      // NOVA
-        { 150, 250, 400 },     // HEARTMATCH
-        { 330, 550, 880 },     // CROSSCODE
-        { 680, 1150, 1850 }    // ZIGZAG
+
+    // ==================== 里程碑：现金 → 全局倍率（2026-10-04） ====================
+    // 原设计发一次性现金，合计 $6,920 —— 在 40 分钟节奏里只占目标金额的 0.35%，
+    // 玩家完全感知不到。改为提升全局倍率 M，语义变为「这条票线让你整体变快」。
+    //
+    // Δ 按几何级数 d_i = 0.08 × 5^(i/5)：低档票增幅要「明显」，但仍低于高档票。
+    //   LUCKY +8.0% → ZIGZAG +40.0%（跨度仅 5x，不是早期方案的 50x）。
+    // **跨度是这条曲线的全部意义**：Δ/操作若差 50 倍，理性玩家解锁 ZIGZAG 后
+    // 永不回头买 LUCKY，低档票直接变成死内容。
+    //
+    // 加性累积（M += Δ）：M_max = 4.73x。代价是 milestone 感随M 变大而贬值 ——
+    // ZIGZAG 第 50 张名义 +40%，实际只从 4.13x 到 4.53x（+9.7%）。已接受，
+    // 因为乘性累积会让 M 复利到 147x，指数源失控。
+    public static readonly float[] MilestoneMultipliers = {
+        0.08f,   // LUCKY
+        0.1104f, // GOLD
+        0.1523f, // NOVA
+        0.2101f, // HEARTMATCH
+        0.2899f, // CROSSCODE
+        0.40f    // ZIGZAG
     };
 
-    // 盘子价值：1→30 改 1→8。原值 30 倍是全局元凶 —— 它同时放大手动擦盘和洗盘机。
+    // 盘子价值：结构冻结（1→8），PV 链是洗盘机收益的乘数之一。
     public static readonly int[] PlateValues = { 1, 2, 3, 5, 8 };
-    public static readonly int[] PlateValueCosts = { 38, 420, 1489, 5643 };
+    public static readonly int[] PlateValueCosts = { 41, 105, 183, 398 };
 
     public const float EmptyPrizeReduction = 0.10f;
 
-    public const int PurpleSpongeCost = 34;
-    public const int MultiPlateCost = 29;
-    public static readonly int[] MultiPlateUpgradeCosts = { 889, 3194, 12071 };
+    //紫海绵放在第一个（4:00）：擦盘 3.0s → 1.5s 是真倍率提升，
+    // 而多盘位只减少「擦完一张要点一次下一张」的空档，收益约 +10–15%，当第一个升级手感太平。
+    public const int PurpleSpongeCost = 68;
+    public const int MultiPlateCost = 37;
+    public static readonly int[] MultiPlateUpgradeCosts = { 705, 776, 562 };
 
-    // 洗盘机：拆掉「容量 × 盘价值」的双指数。容量 5→40 改 5→15（×3），
-    // 配上盘价值 ×8 = 满级 15×8/5 = 24 $/s（原 240 $/s）。
-    public const int WasherUnlockCost = 103;
+    // 洗盘机：解锁 15:00。结构冻结（容量 ×3、周期 ×2）。
+    public const int WasherUnlockCost = 174;
     public static readonly int[] WasherSeconds = { 10, 9, 8, 7, 6, 5 };
     public static readonly int[] WasherCapacities = { 5, 7, 9, 12, 15 };
-    public static readonly int[] WasherSpeedCosts = { 264, 978, 3513, 13278, 29127 };
-    public static readonly int[] WasherCapacityCosts = { 309, 1154, 4210, 16188 };
+    public static readonly int[] WasherSpeedCosts = { 1245, 4429, 13368, 477783, 536165 };
+    public static readonly int[] WasherCapacityCosts = { 2182, 3541, 51462, 302659 };
 
-    // 刮票机：周期 8s→3s 改 20s→12s。
-    // 原值下满级 3s/张比玩家投喂速度（买票 + 拖拽 ≈ 4–5s/张）还快，速度链最后一级
-    // 花 $12,000 买来的那一秒永远用不上；同时机器比人快 = 挂机产出 ≥ 手动，打穿时长。
-    // 改成 20→12s 后机器只比人手（20s/张）快 1.67 倍，队列容量重新有意义。
-    public const int ScratcherUnlockCost = 20851;
+    // 刮票机：解锁 20:00。周期 20→12s（v3 起从 8→3s 改上来的，别再改回去：
+    // 机器比人手快 6.7 倍会让速度链最后一级的 1 秒永远用不上）。
+    public const int ScratcherUnlockCost = 2351;
     public static readonly int[] ScratcherSeconds = { 20, 18, 16, 15, 13, 12 };
-    public static readonly int[] ScratcherSpeedCosts = { 39296, 48555, 96973, 119929, 152831 };
+    public static readonly int[] ScratcherSpeedCosts = { 15514, 42983, 61214, 245549, 202873 };
     public const int ScratcherBaseCapacity = 1;
-    public static readonly int[] ScratcherCapacityCosts = { 44141, 88158, 109026, 138938, 173420 };
+    public static readonly int[] ScratcherCapacityCosts = { 70369, 51684, 477585, 394320, 434064 };
 
     // 自动投喂：买下的票跳过桌面直接进刮票机，消掉「拖拽」这段纯体力操作。
-    // 注意它**不解除 currentTicket 单槽限制** —— 玩家仍需每 N 秒点一次买票，
-    // 这是刻意的：保留参与感，同时把瓶颈交回给机器。
-    public const int AutoFeedCost = 35724;
+    // 不解除 currentTicket 单槽限制 —— 玩家仍需每 N 秒点一次买票，保留参与感。
+    public const int AutoFeedCost = 113865;
 
     // 通关：持有余额达到这个数即通关。
-    public const int WinTarget = 1_000_000;
+    public const int WinTarget = 2_000_000;
 
-    // 全局产出倍率：每买下任意一级升级（含各种"解锁"），所有收入乘一次它。
-    // 37 级 × 1.10 = 约 34 倍；与各链自带的 ~160 倍原始跨度相乘合计约 5,400 倍，
-    // 从开局 $0.31/s 推到终局约 $2,244/s。校准值，别凭感觉改。
+    // 全局产出倍率（升级链部分）：每买下任意一级升级（含各种"解锁"），所有收入乘一次它。
+    // 与 MilestoneMultipliers 相乘得终局 114.7x。校准值，别凭感觉改。
     public const float BoostPerLevel = 1.10f;
 }

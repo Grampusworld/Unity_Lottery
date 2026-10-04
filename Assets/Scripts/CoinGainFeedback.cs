@@ -94,6 +94,72 @@ public class CoinGainFeedback : MonoBehaviour
         else if (revealed != countTarget) BeginCount(revealed);
     }
 
+    //里程碑达成（v4）：里程碑不再发钱，改成提升全局倍率，所以**没有**金额入账，
+    // 也就不能走 ShowGain（它会把 amount 记进 pendingGains，把余额栏的计数锁住）。
+    // 这里复用同一个飘字外壳，只放一行 "+X% MULTIPLIER"，金色描边强调「这是永久强化」。
+    public bool ShowMultiplier(float delta, float actualIncrease, Transform source)
+    {
+        if (canvasRect == null || balanceText == null || delta <= 0f) return false;
+        RectTransform popup = CreatePopup(0, out _, out CanvasGroup group);
+        if (popup == null) return false;
+
+        RectTransform amount = popup.Find("Amount") as RectTransform;
+        if (amount != null)
+        {
+            amount.anchorMin = new Vector2(0.5f, 0.5f);
+            amount.anchoredPosition = Vector2.zero;
+            amount.sizeDelta = new Vector2(400f, 54f);
+            TextMeshProUGUI label = amount.GetComponent<TextMeshProUGUI>();
+            if (label != null)
+            {
+                label.alignment = TextAlignmentOptions.Center;
+                label.color = new Color32(120, 232, 196, 255);
+                label.text = "+" + Mathf.RoundToInt(delta * 100f) + "% MULTIPLIER";
+            }
+        }
+
+        Vector3 anchor = source != null ? source.position : Vector3.zero;
+        if (worldCamera != null && source != null)
+        {
+            SpriteRenderer sourceSprite = source.GetComponent<SpriteRenderer>();
+            if (sourceSprite != null) anchor.y = sourceSprite.bounds.max.y;
+            Vector3 screen = worldCamera.WorldToScreenPoint(anchor);
+            screen.y += 22f;
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screen, uiCamera,
+                out Vector2 start);
+            popup.anchoredPosition = start;
+        }
+        else
+        {
+            popup.anchoredPosition = Vector2.zero;
+        }
+
+        activePopups.Add(popup.gameObject);
+        StartCoroutine(FadeOutPopup(popup, group));
+        return true;
+    }
+
+    private IEnumerator FadeOutPopup(RectTransform popup, CanvasGroup group)
+    {
+        // 停半秒再淡出：和金币飘字的节奏一致，玩家来得及看清「+40%」。
+        float hold = 0.45f;
+        float elapsed = 0f;
+        while (elapsed < hold)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            yield return null;
+        }
+        float fade = 0f;
+        while (fade < fadeDuration)
+        {
+            fade += Time.unscaledDeltaTime;
+            group.alpha = 1f - Mathf.Clamp01(fade / fadeDuration);
+            yield return null;
+        }
+        activePopups.Remove(popup.gameObject);
+        Destroy(popup.gameObject);
+    }
+
     private RectTransform CreatePopup(int amount, out Image coin, out CanvasGroup group)
     {
         GameObject root = new GameObject("Coin Gain " + MoneyFormat.Money(amount), typeof(RectTransform), typeof(CanvasGroup));
@@ -102,7 +168,7 @@ public class CoinGainFeedback : MonoBehaviour
         RectTransform rect = (RectTransform)root.transform;
         rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
         rect.pivot = new Vector2(0.5f, 0.5f);
-        rect.sizeDelta = new Vector2(220f, 56f);
+        rect.sizeDelta = new Vector2(320f, 56f);
         group = root.GetComponent<CanvasGroup>();
         group.blocksRaycasts = false;
         group.interactable = false;
@@ -118,6 +184,8 @@ public class CoinGainFeedback : MonoBehaviour
         coin.sprite = coinFrames[0];
         coin.preserveAspect = true;
         coin.raycastTarget = false;
+        // ShowMultiplier 复用这个外壳但不要金币（里程碑不花钱）。amount = 0 即该模式。
+        icon.SetActive(amount > 0);
 
         GameObject number = new GameObject("Amount", typeof(RectTransform), typeof(TextMeshProUGUI));
         number.transform.SetParent(rect, false);
@@ -125,7 +193,10 @@ public class CoinGainFeedback : MonoBehaviour
         numberRect.anchorMin = numberRect.anchorMax = new Vector2(0f, 0.5f);
         numberRect.pivot = new Vector2(0f, 0.5f);
         numberRect.anchoredPosition = new Vector2(48f, 0f);
-        numberRect.sizeDelta = new Vector2(165f, 54f);
+        // 金币飘字本身不带币种前缀之外的缩放，取最宽的钱文案 `+$10,000,000`
+        // = 12 字符 × fs24 = 288px，留到 320。倍率飘字更宽（+X% MULTIPLIER 最多 16 字符
+        // = 384px），但它走 ShowMultiplier 里单独设置的 400px 框，两者不共用。
+        numberRect.sizeDelta = new Vector2(320f, 54f);
         TextMeshProUGUI label = number.GetComponent<TextMeshProUGUI>();
         label.font = balanceText.font;
         label.fontSize = 24f;
@@ -133,7 +204,7 @@ public class CoinGainFeedback : MonoBehaviour
         label.alignment = TextAlignmentOptions.MidlineLeft;
         label.overflowMode = TextOverflowModes.Overflow;
         label.raycastTarget = false;
-        label.text = "+" + MoneyFormat.Money(amount);
+        label.text = amount > 0 ? "+" + MoneyFormat.Money(amount) : "";
         return rect;
     }
 

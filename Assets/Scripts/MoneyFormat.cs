@@ -1,44 +1,45 @@
 using System.Globalization;
 
-// 大额金额的缩写显示。通关目标抬到 7 位数之后，像素字体的余额框和按钮都塞不下
-// 「$1,000,000」这种 9 字符长串，所以超过 6 位就切成 $100.5K / $1.2M。
+// 金额显示。**全场只有这一个入口**：余额、票价、解锁价、升级价、按钮提示、
+// 目标文本都走它。任何地方再手写一次 "$" + 数字，就等于给自己留一个
+// 「某块 UI 忘了千分位」的坑。
 //
-// **全场只有这一个入口**：余额、票价、解锁价、升级价、按钮提示都走它。
-// 任何地方再手写一次 "$" + 数字，就等于给自己留一个"某块 UI 忘了缩写"的坑。
+// ## 为什么不再缩写（2026-10-04 改）
+// 以前超 6 位就切$100.5K / $1.2M，理由是「像素字体的框塞不下 9 字符长串」。
+// 现在**一律完整数字 + 千分位**：缩写会让玩家在两个量级之间来回心算
+// （"1.2M 到底是120万还是12万"），而游戏后期余额动辄七位数，精度比省字符重要。
+//
+// **代价是宽度，所以每个文本框的宽度都必须按完整数字重算** ——
+// Press Start 2P 是等宽字体，1 字符 = fontSize px，宽度直接等于 字符数 × 字号。
+// 见 ShopLayoutFix.MoneyWidth（余额框）、GoalSetup.LabelWidth（GOAL 标签）。
 public static class MoneyFormat
 {
-    // 在这个值以内保持完整数字（含千分位分隔符）。像素字体下 6 位还能塞进余额框，
-    // 7 位开始就有溢出风险 —— 而 7 位正是 $1,000,000 量级的起点。
-    public const long FullUpTo = 99_999L;
-
-    // 带 $ 前缀的完整形式。小于 FullUpTo 用千分位，否则用 K/M/B 后缀。
+    // 带 $ 前缀、千分位、**永不缩写**。负数走递归（`-` 贴在 $ 后面：`-$500`）。
     public static string Money(long amount)
     {
         if (amount < 0) return "-" + Money(-amount);
-        if (amount <= FullUpTo) return "$" + amount.ToString("N0", CultureInfo.InvariantCulture);
-        return "$" + Short(amount);
+        return "$" + amount.ToString("N0", CultureInfo.InvariantCulture);
     }
 
-    // 不带 $ 的缩写主体，给「$10 -> $25」这种拼接场合用。
-    public static string Short(long amount)
+    // **不缩写**的完整形式。历史上它只用在结算面板这种「就是要给玩家看确切数字」
+    // 的场合，现在 Money() 本身就恒等于不缩写，所以两者输出一致。
+    // 保留这个方法是因为调用点的**语义**不同（结算面板 = 战绩快照），
+    // 将来若Money() 重新引入某种压缩，这里是天然的例外出口。
+    public static string Full(long amount)
     {
-        if (amount < 0) return "-" + Short(-amount);
-        if (amount <= FullUpTo) return amount.ToString(CultureInfo.InvariantCulture);
-
-        // 换挡阈值取 999,950 而不是 1,000,000：否则 999,999 会走 K 档、
-        // 四舍五入成 1,000.0K —— 显示成 "$1000K" 而不是 "$1M"。
-        // 判据是「四舍五入之后还塞不塞得下」，不是「原值有没有过整数门」。
-        if (amount >= 999_950_000L) return Trim(amount / 1_000_000_000.0) + "B";
-        if (amount >= 999_950L) return Trim(amount / 1_000_000.0) + "M";
-        return Trim(amount / 1_000.0) + "K";
+        return Money(amount);
     }
 
-    // 保留一位小数，但整数时省掉 ".0"（$1M 比 $1.0M 短一个字符，像素字体下这很值）。
-    private static string Trim(double value)
+    // 倍率显示。**唯一入口** —— GOAL 区的实时倍率和结算面板的战绩倍率共用它，
+    // 所以玩家绝不会在两处看到不同写法（曾经一处"X114.7"、一处"1.08X"）。
+    //
+    // 格式 `X1.08`：前缀大写 X + **两位小数**。选前缀 X 而不是后缀 X，
+    // 是因为结算面板的标签列靠等宽空格对齐（"MONEY   "/"SPEED   "），
+    // 值统一从第 9 个字符起笔；前缀 X 让所有值左边界一致。
+    // 两位小数而非一位：倍率从 1涨到 100+，一位小数下前期 1.0→1.1 的跳变
+    // 会被四舍五入吃掉好几个升级。
+    public static string Multiplier(float value)
     {
-        double rounded = System.Math.Round(value, 1);
-        if (System.Math.Abs(rounded - System.Math.Round(rounded)) < 0.05)
-            return ((long)System.Math.Round(rounded)).ToString(CultureInfo.InvariantCulture);
-        return rounded.ToString("0.0", CultureInfo.InvariantCulture);
+        return "X" + value.ToString("0.00", CultureInfo.InvariantCulture);
     }
 }
