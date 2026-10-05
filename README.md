@@ -14,7 +14,7 @@
 
 > 当前仓库提供 Unity 项目源码，按下文步骤即可在编辑器里试玩。游戏界面与新手引导为英文。
 
-## 29 秒实机宣传片
+## 实机宣传片
 
 以下片段全部来自本仓库当前版本的实际运行画面，没有概念图或手绘素材。
 
@@ -25,6 +25,7 @@
 
 分镜方案见 [宣传片方案](Docs/TrailerPlan/LotteryMania_Trailer_29s.md)，录制与剪辑说明见 [Production/README](Docs/TrailerPlan/Production/README.md)。
 
+## 游戏背景
 ## 从洗碗工，到猫粮赞助商
 
 ### 第一桶金，真的要用海绵擦
