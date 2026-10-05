@@ -1,5 +1,7 @@
 # 挂个爽 · Lottery Mania
 
+🌍 **[中文](README.md)** · [English](README.en.md)
+
 **公元 9999 年，你的猫想吃一袋猫粮。价格：$2,000,000。**
 
 <img src="Assets/Materials/Kitty1.png" alt="等待你赚猫粮钱的猫老板" width="144">
