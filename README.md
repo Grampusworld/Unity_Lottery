@@ -18,9 +18,10 @@
 
 以下片段全部来自本仓库当前版本的实际运行画面，没有概念图或手绘素材。
 
-<video src="https://github.com/Grampusworld/Unity_Lottery/raw/main/Docs/TrailerPlan/Production/LotteryMania_29s_1080p60.mp4" poster="Docs/TrailerPlan/Production/contact-sheet.jpg" controls preload="metadata" width="720" style="max-width:100%;height:auto"></video>
+<video src="https://cdn.jsdelivr.net/gh/Grampusworld/Unity_Lottery@main/Docs/TrailerPlan/Production/LotteryMania_29s_1080p60.web.mp4" poster="Docs/TrailerPlan/Production/contact-sheet.jpg" controls preload="metadata" width="720" style="max-width:100%;height:auto"></video>
 
-[在 GitHub 上直接播放](https://github.com/Grampusworld/Unity_Lottery/raw/main/Docs/TrailerPlan/Production/LotteryMania_29s_1080p60.mp4) · [下载 MP4（1920×1080 · 60fps · 29s · 29MB）](https://github.com/Grampusworld/Unity_Lottery/raw/main/Docs/TrailerPlan/Production/LotteryMania_29s_1080p60.mp4)
+> 播放器里的版本是 14MB 的网页压缩转码，可直接在线播放。
+> [在浏览器新标签页打开](https://cdn.jsdelivr.net/gh/Grampusworld/Unity_Lottery@main/Docs/TrailerPlan/Production/LotteryMania_29s_1080p60.web.mp4) · [下载 29MB 高码率原版](https://github.com/Grampusworld/Unity_Lottery/raw/main/Docs/TrailerPlan/Production/LotteryMania_29s_1080p60.mp4)（1920×1080 · 60fps · 8.3Mbps）
 
 分镜方案见 [宣传片方案](Docs/TrailerPlan/LotteryMania_Trailer_29s.md)，录制与剪辑说明见 [Production/README](Docs/TrailerPlan/Production/README.md)。
 
