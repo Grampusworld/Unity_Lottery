@@ -14,7 +14,7 @@
 
 **目标很明确：让手头现金达到 $2,000,000，完成猫粮订单。**
 
-> 当前仓库提供 Unity 项目源码，按下文步骤即可在编辑器里试玩。游戏界面与新手引导为英文。
+> 正式版 v1.0 已发布，可从 [Releases](https://github.com/Grampusworld/Unity_Lottery/releases) 下载 Windows 64 位压缩包直接试玩，无需安装 Unity；仓库同时提供项目源码。游戏界面与新手引导为英文。
 
 ## 实机宣传片
 
@@ -92,20 +92,18 @@ https://github.com/user-attachments/assets/af7ec7cf-e8f5-4e3e-b105-8ca66f10a732
 
 **第一次玩的小建议：** 先洗盘子积累本金，体验几种彩票，再根据自己的节奏购买设备。别把全部现金都押在“再来一张”上——猫老板可以等，下一只盘子也可以。
 
-## 在 Unity 中试玩
+## 下载试玩
 
-1. 克隆项目：
+正式版 **v1.0** 已发布，当前提供 Windows 64 位版本：
 
-   ```bash
-   git clone https://github.com/Grampusworld/Unity_Lottery.git
-   ```
+1. 前往 [Releases](https://github.com/Grampusworld/Unity_Lottery/releases) 页面，下载 `LotteryMania-v1.0-Windows-x64.zip`（约 39 MB）。
+2. 将压缩包**完整解压**到一个文件夹，不要在压缩包内直接运行。
+3. 双击其中的 **Lottery Mania.exe** 启动游戏。
+4. 选择 **NEW GAME**，跟着猫咪完成引导，从第一只盘子开始。
 
-2. 在 **Unity Hub → Add project from disk** 中选择项目目录。
-3. 使用 **Unity 6000.5.5f1** 打开，等待素材和软件包导入完成。首次导入需要网络访问软件包源。
-4. 打开 `Assets/Scenes/SampleScene.unity`，点击编辑器的 **Play**。
-5. 选择 **NEW GAME**，跟着猫咪完成引导，从第一只盘子开始。
+解压后的所有文件和文件夹请保留在一起，移动或删除其中任何一部分都会导致游戏无法启动。进度使用本机 `PlayerPrefs` 保存，不是云存档；NEW GAME 会覆盖已有游戏进度。
 
-场景、预制体和素材已包含在仓库中，正常试玩无需运行编辑器装配菜单。进度使用本机 `PlayerPrefs` 保存，不是云存档；NEW GAME 会覆盖已有游戏进度。
+想从源码运行的开发者：克隆仓库后，在 **Unity Hub → Add project from disk** 中选择项目目录，用 **Unity 6000.5.5f1** 打开，等待素材和软件包导入完成（首次导入需要网络访问软件包源），再打开 `Assets/Scenes/SampleScene.unity` 点击编辑器的 **Play**。
 
 ## 给好奇的开发者
 
@@ -145,6 +143,7 @@ Assets/
   Prefabs/        彩票与盘子预制体
   Resources/      音效与背景音乐
   Scenes/         SampleScene.unity
+  Settings/       URP 渲染与输入动作配置
   Scripts/        玩法、经济、交互、UI 与动效
 Packages/         软件包依赖
 ProjectSettings/  Unity 项目配置
@@ -156,7 +155,7 @@ Docs/             功能与设计说明
 
 ## 来交一份猫粮账单
 
-欢迎试玩后在 [Issues](https://github.com/Grampusworld/Unity_Lottery/issues) 分享反馈：哪种彩票最想再刮一张、哪次升级等得太久、哪一个操作让你摸不着头脑。报告问题时附上复现步骤、Unity 版本和截图，会更方便定位。
+欢迎试玩后在 [Issues](https://github.com/Grampusworld/Unity_Lottery/issues) 分享反馈：哪种彩票最想再刮一张、哪次升级等得太久、哪一个操作让你摸不着头脑。报告问题时附上复现步骤、操作系统，以及游戏版本（下载版）或 Unity 版本（源码试玩）和截图，会更方便定位。
 
 如果这只猫成功让你又洗了一只盘子，也欢迎给仓库点个 Star。
 

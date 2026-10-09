@@ -14,7 +14,7 @@ Welcome to **Lottery Mania**, a **2D pixel art incremental game** about washing 
 
 **Your goal: hold $2,000,000 in cash and pay for the cat food.**
 
-> This repository contains the Unity project source. Follow the instructions below to play in the editor. The game interface and onboarding tutorial are in English.
+> Version v1.0 has been released: download the Windows 64-bit package from [Releases](https://github.com/Grampusworld/Unity_Lottery/releases) to play without installing Unity. The repository also contains the project source. The game interface and onboarding tutorial are in English.
 
 ## Gameplay trailer
 
@@ -93,20 +93,18 @@ Reach the goal to see a completion screen showing your run's results. Return to 
 
 **A tip for your first run:** Wash some plates to build your starting funds, try a few ticket types, and buy equipment at your own pace. Don't put every last dollar into “just one more ticket.” Your cat can wait, and so can the next dirty plate.
 
-## Play in Unity
+## Download and play
 
-1. Clone the project:
+Version **v1.0** is released, currently for 64-bit Windows:
 
-   ```bash
-   git clone https://github.com/Grampusworld/Unity_Lottery.git
-   ```
+1. Download `LotteryMania-v1.0-Windows-x64.zip` (about 39 MB) from the [Releases](https://github.com/Grampusworld/Unity_Lottery/releases) page.
+2. Extract the archive **completely** into a folder; don't run the game from inside the archive.
+3. Double-click **Lottery Mania.exe** to start the game.
+4. Choose **NEW GAME**, follow your cat's tutorial, and start with your first plate.
 
-2. In **Unity Hub → Add project from disk**, select the project directory.
-3. Open it with **Unity 6000.5.5f1** and wait for assets and packages to finish importing. The first import needs network access to the package sources.
-4. Open `Assets/Scenes/SampleScene.unity` and press **Play** in the editor.
-5. Choose **NEW GAME**, follow your cat's tutorial, and start with your first plate.
+Keep all extracted files and folders together; moving or deleting any of them will stop the game from launching. Progress is stored locally using `PlayerPrefs`, rather than in the cloud. NEW GAME overwrites existing game progress after confirmation.
 
-The repository includes the scene, prefabs, and assets. You can play without running the editor setup menus. Progress is stored locally using `PlayerPrefs`, rather than in the cloud. NEW GAME overwrites existing game progress after confirmation.
+Developers who want to run the source: clone the repository, select the project directory in **Unity Hub → Add project from disk**, open it with **Unity 6000.5.5f1**, and wait for assets and packages to finish importing (the first import needs network access to the package sources). Then open `Assets/Scenes/SampleScene.unity` and press **Play** in the editor.
 
 ## For curious developers
 
@@ -146,6 +144,7 @@ Assets/
   Prefabs/        Ticket and plate prefabs
   Resources/      Sound effects and background music
   Scenes/         SampleScene.unity
+  Settings/       URP rendering and Input Actions configuration
   Scripts/        Gameplay, economy, interactions, UI, and animation
 Packages/         Package dependencies
 ProjectSettings/  Unity project configuration
@@ -157,7 +156,7 @@ Read more in the [onboarding notes](Docs/NewGameTutorial.md), [main menu notes](
 
 ## Show us your cat food bill
 
-After playing, share your feedback in [Issues](https://github.com/Grampusworld/Unity_Lottery/issues). Which ticket makes you want to scratch another? Which upgrade takes too long? Which interaction leaves you confused? Include reproduction steps, your Unity version, and screenshots when reporting a problem.
+After playing, share your feedback in [Issues](https://github.com/Grampusworld/Unity_Lottery/issues). Which ticket makes you want to scratch another? Which upgrade takes too long? Which interaction leaves you confused? Include reproduction steps, your operating system, the game version (for the downloaded build) or Unity version (when running from source), and screenshots when reporting a problem.
 
 If this cat persuades you to wash just one more plate, a Star is welcome too.
 
