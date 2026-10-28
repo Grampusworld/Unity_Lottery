@@ -14,7 +14,9 @@ Welcome to **Lottery Mania**, a **2D pixel art incremental game** about washing 
 
 **Your goal: hold $2,000,000 in cash and pay for the cat food.**
 
-> Version v1.0 has been released: download the Windows 64-bit package from [Releases](https://github.com/Grampusworld/Unity_Lottery/releases) to play without installing Unity. The repository also contains the project source. The game interface and onboarding tutorial are in English.
+> **[▶ Play in your browser](https://grampusworld.github.io/Unity_Lottery/)**: open the page and play, no download needed.
+>
+> Version v1.0 has been released: you can also download the Windows 64-bit package from [Releases](https://github.com/Grampusworld/Unity_Lottery/releases) to play without installing Unity. The repository also contains the project source. The game interface and onboarding tutorial are in English.
 
 ## Gameplay trailer
 
@@ -95,6 +97,12 @@ Reach the goal to see a completion screen showing your run's results. Return to 
 
 ## Download and play
 
+### Web version
+
+Open **https://grampusworld.github.io/Unity_Lottery/** to play in a desktop browser (Chrome, Edge, Safari, or Firefox). The first load downloads about 60 MB; after that the browser caches it. Web progress is saved in the current browser and won't carry over to another browser or device, or survive clearing site data.
+
+### Windows version
+
 Version **v1.0** is released, currently for 64-bit Windows:
 
 1. Download `LotteryMania-v1.0-Windows-x64.zip` (about 39 MB) from the [Releases](https://github.com/Grampusworld/Unity_Lottery/releases) page.
@@ -105,6 +113,8 @@ Version **v1.0** is released, currently for 64-bit Windows:
 Keep all extracted files and folders together; moving or deleting any of them will stop the game from launching. Progress is stored locally using `PlayerPrefs`, rather than in the cloud. NEW GAME overwrites existing game progress after confirmation.
 
 Developers who want to run the source: clone the repository, select the project directory in **Unity Hub → Add project from disk**, open it with **Unity 6000.5.5f1**, and wait for assets and packages to finish importing (the first import needs network access to the package sources). Then open `Assets/Scenes/SampleScene.unity` and press **Play** in the editor.
+
+To build the web version yourself, choose **Tools → Build WebGL** in the Unity menu; the output goes to `Builds/WebGL/`. From the command line: `Unity -batchmode -quit -buildTarget WebGL -projectPath . -executeMethod WebGLBuild.Build`. The web version is hosted from the `gh-pages` branch; push the contents of `Builds/WebGL/` to that branch to update it.
 
 ## For curious developers
 

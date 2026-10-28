@@ -14,7 +14,9 @@
 
 **目标很明确：让手头现金达到 $2,000,000，完成猫粮订单。**
 
-> 正式版 v1.0 已发布，可从 [Releases](https://github.com/Grampusworld/Unity_Lottery/releases) 下载 Windows 64 位压缩包直接试玩，无需安装 Unity；仓库同时提供项目源码。游戏界面与新手引导为英文。
+> **[▶ 在浏览器里直接玩](https://grampusworld.github.io/Unity_Lottery/)**：打开网页即可游玩，无需下载。
+>
+> 正式版 v1.0 已发布，也可从 [Releases](https://github.com/Grampusworld/Unity_Lottery/releases) 下载 Windows 64 位压缩包直接试玩，无需安装 Unity；仓库同时提供项目源码。游戏界面与新手引导为英文。
 
 ## 实机宣传片
 
@@ -94,6 +96,12 @@ https://github.com/user-attachments/assets/af7ec7cf-e8f5-4e3e-b105-8ca66f10a732
 
 ## 下载试玩
 
+### 网页版
+
+打开 **https://grampusworld.github.io/Unity_Lottery/** 即可游玩，桌面浏览器（Chrome、Edge、Safari、Firefox）均可。首次加载需要下载约 60 MB，之后浏览器会缓存。网页版进度保存在当前浏览器里，换浏览器、换设备或清除网站数据后不会保留。
+
+### Windows 版
+
 正式版 **v1.0** 已发布，当前提供 Windows 64 位版本：
 
 1. 前往 [Releases](https://github.com/Grampusworld/Unity_Lottery/releases) 页面，下载 `LotteryMania-v1.0-Windows-x64.zip`（约 39 MB）。
@@ -104,6 +112,8 @@ https://github.com/user-attachments/assets/af7ec7cf-e8f5-4e3e-b105-8ca66f10a732
 解压后的所有文件和文件夹请保留在一起，移动或删除其中任何一部分都会导致游戏无法启动。进度使用本机 `PlayerPrefs` 保存，不是云存档；NEW GAME 会覆盖已有游戏进度。
 
 想从源码运行的开发者：克隆仓库后，在 **Unity Hub → Add project from disk** 中选择项目目录，用 **Unity 6000.5.5f1** 打开，等待素材和软件包导入完成（首次导入需要网络访问软件包源），再打开 `Assets/Scenes/SampleScene.unity` 点击编辑器的 **Play**。
+
+自己打网页版：在 Unity 菜单选择 **Tools → Build WebGL**，产物输出到 `Builds/WebGL/`；也可以用命令行 `Unity -batchmode -quit -buildTarget WebGL -projectPath . -executeMethod WebGLBuild.Build`。网页版由 `gh-pages` 分支托管，把 `Builds/WebGL/` 的内容推到该分支即可更新。
 
 ## 给好奇的开发者
 
